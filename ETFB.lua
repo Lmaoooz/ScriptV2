@@ -11,8 +11,8 @@ local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/d
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "Brainrot Teleporter " .. Fluent.Version,
-    SubTitle = "by dawid",
+    Title = "Escape Tsunami For Brainrots!",
+    SubTitle = "by WnZ",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Acrylic = true,
@@ -412,26 +412,6 @@ AutoFarmToggle:OnChanged(function(Value)
     end
 end)
 
-Window:SelectTab(1)
-
-SaveManager:SetLibrary(Fluent)
-InterfaceManager:SetLibrary(Fluent)
-SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({})
-InterfaceManager:SetFolder("FluentScriptHub")
-SaveManager:SetFolder("FluentScriptHub/brainrot-teleporter")
-
-InterfaceManager:BuildInterfaceSection(Tabs.Settings)
-SaveManager:BuildConfigSection(Tabs.Settings)
-
-SaveManager:LoadAutoloadConfig()
-
-Fluent:Notify({
-    Title = "Brainrot Teleporter",
-    Content = "Script loaded successfully!",
-    Duration = 5
-})
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
@@ -647,10 +627,14 @@ end
 
 Window:SelectTab(1)
 
-Fluent:Notify({
-    Title = "Brainrot Teleporter",
-    Content = "Script loaded successfully!",
-    Duration = 5
-})
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({})
+InterfaceManager:SetFolder("FluentScriptHub")
+SaveManager:SetFolder("FluentScriptHub/brainrot-teleporter")
+
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
 
 SaveManager:LoadAutoloadConfig()
