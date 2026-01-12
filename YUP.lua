@@ -11,8 +11,8 @@ local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/d
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "Brainrot Teleporter " .. Fluent.Version,
-    SubTitle = "by dawid",
+    Title = "Escape Tsunami For Brainrots!",
+    SubTitle = "by WnZ",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Acrylic = true,
@@ -21,7 +21,7 @@ local Window = Fluent:CreateWindow({
 })
 
 local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "" }),
+    Main = Window:AddTab({ Title = "Main", Icon = "users" }),
     Miscellaneous = Window:AddTab({ Title = "Miscellaneous", Icon = "wrench" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
@@ -161,7 +161,7 @@ end)
 
 Tabs.Main:AddButton({
     Title = "Refresh Brainrot List",
-    Description = "Manually refresh the available brainrots",
+    Description = "Refresh the available brainrots",
     Callback = function()
         updateBrainrotDropdown()
         Fluent:Notify({
@@ -205,7 +205,7 @@ RemoveProximityToggle:OnChanged(function(Value)
 end)
 
 local AutoFarmToggle = Tabs.Main:AddToggle("AutoFarm", {
-    Title = "Auto Farm Brainrot",
+    Title = "Teleport To Brainrot",
     Description = "Automatically teleports and collects brainrot",
     Default = false
 })
@@ -476,7 +476,7 @@ end)
     
     local UpgradeBrainrotToggle = Tabs.Miscellaneous:AddToggle("UpgradeBrainrotToggle", {
         Title = "Toggle [Upgrade Brainrot]",
-        Description = "Enable/disable upgrading brainrots (fires per 1s)",
+        Description = "Enable/disable upgrading brainrots",
         Default = false
     })
     
@@ -524,7 +524,7 @@ end)
     
     local UpgradeSpeedToggle = Tabs.Miscellaneous:AddToggle("UpgradeSpeedToggle", {
         Title = "Toggle [Upgrade Speed]",
-        Description = "Enable/disable upgrading speed (fires per 0.5s)",
+        Description = "Enable/disable upgrading speed",
         Default = false
     })
     
@@ -557,7 +557,7 @@ end)
     
     local UpgradeCarryToggle = Tabs.Miscellaneous:AddToggle("UpgradeCarry", {
         Title = "Upgrade Carry",
-        Description = "Automatically upgrade carry capacity (fires per 0.5s)",
+        Description = "Automatically upgrade carry capacity",
         Default = false
     })
     
@@ -585,7 +585,7 @@ end)
     
     local UpgradeBaseToggle = Tabs.Miscellaneous:AddToggle("UpgradeBase", {
         Title = "Upgrade Base",
-        Description = "Automatically upgrade base (fires per 2s)",
+        Description = "Automatically upgrade base",
         Default = false
     })
     
@@ -609,7 +609,7 @@ end)
     end)
     
     Tabs.Miscellaneous:AddButton({
-        Title = "Sell Brainrot (Hold the brainrot first)",
+        Title = "Sell Brainrot (Hold your brainrot first)",
         Description = "Sells the currently held brainrot",
         Callback = function()
             game:GetService("ReplicatedStorage").RemoteFunctions.SellTool:InvokeServer()
