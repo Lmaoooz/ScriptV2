@@ -412,37 +412,6 @@ AutoFarmToggle:OnChanged(function(Value)
     end
 end)
 
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local player = Players.LocalPlayer
-
-local logoGui = Instance.new("ScreenGui")
-logoGui.Name = "WnZGUI"
-logoGui.ResetOnSpawn = false
-logoGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-logoGui.Parent = player:WaitForChild("PlayerGui")
-
-local logoButton = Instance.new("ImageButton")
-logoButton.Name = "VeryNormalImage"
-logoButton.Size = UDim2.new(0, 50, 0, 50)
-logoButton.Position = UDim2.new(0, 10, 0, 10)
-logoButton.BackgroundTransparency = 1
-logoButton.Image = "rbxassetid://98905775020119"
-logoButton.Parent = logoGui
-
-local isMinimized = false
-local function toggleFluent()
-    isMinimized = not isMinimized
-    Window:Minimize(isMinimized)
-end
-
-logoButton.Activated:Connect(toggleFluent)
-
-UserInputService.InputBegan:Connect(function(input, gpe)
-    if not gpe and input.KeyCode == Enum.KeyCode.LeftControl then
-        toggleFluent()
-    end
-end)
     local slotList = {}
     for i = 1, 30 do
         table.insert(slotList, "Slot" .. i)
@@ -625,16 +594,53 @@ end)
     })
 end
 
-Window:SelectTab(1)
-
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
 SaveManager:IgnoreThemeSettings()
 SaveManager:SetIgnoreIndexes({})
 InterfaceManager:SetFolder("FluentScriptHub")
 SaveManager:SetFolder("FluentScriptHub/brainrot-teleporter")
-
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
 
+Window:SelectTab(1)
+
+Fluent:Notify({
+    Title = "Notify",
+    Content = "The script has been loaded.",
+    Duration = 8
+})
+
 SaveManager:LoadAutoloadConfig()
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+
+local logoGui = Instance.new("ScreenGui")
+logoGui.Name = "WnZGUI"
+logoGui.ResetOnSpawn = false
+logoGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+logoGui.Parent = player:WaitForChild("PlayerGui")
+
+local logoButton = Instance.new("ImageButton")
+logoButton.Name = "VeryNormalImage"
+logoButton.Size = UDim2.new(0, 50, 0, 50)
+logoButton.Position = UDim2.new(0, 10, 0, 10)
+logoButton.BackgroundTransparency = 1
+logoButton.Image = "rbxassetid://98905775020119"
+logoButton.Parent = logoGui
+
+local isMinimized = false
+local function toggleFluent()
+    isMinimized = not isMinimized
+    Window:Minimize(isMinimized)
+end
+
+logoButton.Activated:Connect(toggleFluent)
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if not gpe and input.KeyCode == Enum.KeyCode.LeftControl then
+        toggleFluent()
+    end
+end)
