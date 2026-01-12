@@ -1,0 +1,656 @@
+if game.PlaceId ~= 131623223084840 then
+    return
+end
+
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+local Window = Fluent:CreateWindow({
+    Title = "Brainrot Teleporter " .. Fluent.Version,
+    SubTitle = "by dawid",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+local Tabs = {
+    Main = Window:AddTab({ Title = "Main", Icon = "" }),
+    Miscellaneous = Window:AddTab({ Title = "Miscellaneous", Icon = "wrench" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+}
+
+local Options = Fluent.Options
+
+local selectedRarity = nil
+local selectedBrainrot = nil
+local lastTeleportedIndex = {}
+local autoFarmEnabled = false
+local autoFarmConnection = nil
+
+local function getPlayerBase()
+    local player = game.Players.LocalPlayer
+    local basesFolder = workspace:FindFirstChild("Bases")
+    
+    if not basesFolder then return nil end
+    
+    for _, base in pairs(basesFolder:GetChildren()) do
+        local title = base:FindFirstChild("Title")
+        if title then
+            local titleGui = title:FindFirstChild("TitleGui")
+            if titleGui then
+                local frame = titleGui:FindFirstChild("Frame")
+                if frame then
+                    local playerName = frame:FindFirstChild("PlayerName")
+                    if playerName and playerName:IsA("TextLabel") then
+                        if playerName.Text == player.DisplayName then
+                            return base
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    return nil
+end
+
+local function removeProximityPromptDurations()
+    for _, descendant in pairs(workspace:GetDescendants()) do
+        if descendant:IsA("ProximityPrompt") then
+            descendant.HoldDuration = 0
+        end
+    end
+end
+
+local function pressE()
+    local VirtualInputManager = game:GetService("VirtualInputManager")
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+    task.wait(0.1)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+end
+
+local function getRarities()
+    local rarities = {}
+    local activeBrainrots = workspace:FindFirstChild("ActiveBrainrots")
+    
+    if activeBrainrots then
+        for _, child in pairs(activeBrainrots:GetChildren()) do
+            if child:IsA("Folder") or child:IsA("Model") then
+                table.insert(rarities, child.Name)
+            end
+        end
+    end
+    
+    return rarities
+end
+
+local function getBrainrots(rarity)
+    local brainrots = {}
+    local brainrotNames = {}
+    local activeBrainrots = workspace:FindFirstChild("ActiveBrainrots")
+    
+    if activeBrainrots and rarity then
+        local rarityFolder = activeBrainrots:FindFirstChild(rarity)
+        if rarityFolder then
+            for _, child in pairs(rarityFolder:GetChildren()) do
+                if not brainrotNames[child.Name] then
+                    table.insert(brainrots, child.Name)
+                    brainrotNames[child.Name] = true
+                end
+            end
+        end
+    end
+    
+    return brainrots
+end
+
+local function updateBrainrotDropdown()
+    if selectedRarity then
+        local brainrots = getBrainrots(selectedRarity)
+        BrainrotDropdown:SetValues(brainrots)
+        
+        if #brainrots > 0 then
+            local found = false
+            for _, name in pairs(brainrots) do
+                if name == selectedBrainrot then
+                    found = true
+                    break
+                end
+            end
+            
+            if not found then
+                selectedBrainrot = brainrots[1]
+                BrainrotDropdown:SetValue(brainrots[1])
+            end
+        else
+            selectedBrainrot = nil
+        end
+    end
+end
+
+local RarityDropdown = Tabs.Main:AddDropdown("RarityDropdown", {
+    Title = "Select Rarity",
+    Values = getRarities(),
+    Multi = false,
+    Default = 1,
+})
+
+BrainrotDropdown = Tabs.Main:AddDropdown("BrainrotDropdown", {
+    Title = "Select Brainrot",
+    Values = {},
+    Multi = false,
+    Default = 1,
+})
+
+RarityDropdown:OnChanged(function(Value)
+    selectedRarity = Value
+    selectedBrainrot = nil
+    updateBrainrotDropdown()
+end)
+
+BrainrotDropdown:OnChanged(function(Value)
+    selectedBrainrot = Value
+end)
+
+Tabs.Main:AddButton({
+    Title = "Refresh Brainrot List",
+    Description = "Manually refresh the available brainrots",
+    Callback = function()
+        updateBrainrotDropdown()
+        Fluent:Notify({
+            Title = "Refreshed",
+            Content = "Brainrot list has been updated!",
+            Duration = 2
+        })
+    end
+})
+
+local RemoveProximityToggle = Tabs.Main:AddToggle("RemoveProximity", {
+    Title = "Remove ProximityPrompt Duration",
+    Description = "Sets all ProximityPrompt hold duration to 0",
+    Default = true
+})
+
+local proximityConnection = nil
+
+RemoveProximityToggle:OnChanged(function(Value)
+    if Value then
+        removeProximityPromptDurations()
+        Fluent:Notify({
+            Title = "ProximityPrompt",
+            Content = "All durations set to 0!",
+            Duration = 2
+        })
+        
+        if not proximityConnection then
+            proximityConnection = workspace.DescendantAdded:Connect(function(descendant)
+                if descendant:IsA("ProximityPrompt") and Options.RemoveProximity.Value then
+                    descendant.HoldDuration = 0
+                end
+            end)
+        end
+    else
+        if proximityConnection then
+            proximityConnection:Disconnect()
+            proximityConnection = nil
+        end
+    end
+end)
+
+local AutoFarmToggle = Tabs.Main:AddToggle("AutoFarm", {
+    Title = "Auto Farm Brainrot",
+    Description = "Automatically teleports and collects brainrot",
+    Default = false
+})
+
+AutoFarmToggle:OnChanged(function(Value)
+    autoFarmEnabled = Value
+    
+    if Value then
+        if not selectedRarity then
+            Fluent:Notify({
+                Title = "Error",
+                Content = "Please select a rarity first!",
+                Duration = 3
+            })
+            AutoFarmToggle:SetValue(false)
+            return
+        end
+        
+        if not selectedBrainrot then
+            Fluent:Notify({
+                Title = "Error",
+                Content = "Please select a brainrot first!",
+                Duration = 3
+            })
+            AutoFarmToggle:SetValue(false)
+            return
+        end
+        
+        autoFarmConnection = task.spawn(function()
+            while autoFarmEnabled do
+                local activeBrainrotsFolder = workspace:FindFirstChild("ActiveBrainrots")
+                if not activeBrainrotsFolder then
+                    Fluent:Notify({
+                        Title = "Error",
+                        Content = "ActiveBrainrots folder not found!",
+                        Duration = 3
+                    })
+                    AutoFarmToggle:SetValue(false)
+                    break
+                end
+                
+                local rarityFolder = activeBrainrotsFolder:FindFirstChild(selectedRarity)
+                if not rarityFolder then
+                    Fluent:Notify({
+                        Title = "Error",
+                        Content = "Rarity folder not found!",
+                        Duration = 3
+                    })
+                    AutoFarmToggle:SetValue(false)
+                    break
+                end
+                
+                local brainrotModels = {}
+                for _, child in pairs(rarityFolder:GetChildren()) do
+                    if child.Name == selectedBrainrot then
+                        table.insert(brainrotModels, child)
+                    end
+                end
+                
+                if #brainrotModels == 0 then
+                    Fluent:Notify({
+                        Title = "Error",
+                        Content = "Brainrot model not found!",
+                        Duration = 3
+                    })
+                    AutoFarmToggle:SetValue(false)
+                    break
+                end
+                
+                if not lastTeleportedIndex[selectedBrainrot] then
+                    lastTeleportedIndex[selectedBrainrot] = 0
+                end
+                
+                lastTeleportedIndex[selectedBrainrot] = lastTeleportedIndex[selectedBrainrot] + 1
+                if lastTeleportedIndex[selectedBrainrot] > #brainrotModels then
+                    lastTeleportedIndex[selectedBrainrot] = 1
+                end
+                
+                local brainrotModel = brainrotModels[lastTeleportedIndex[selectedBrainrot]]
+                
+                local player = game.Players.LocalPlayer
+                local character = player.Character or player.CharacterAdded:Wait()
+                local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+                
+                if not humanoidRootPart then
+                    Fluent:Notify({
+                        Title = "Error",
+                        Content = "HumanoidRootPart not found!",
+                        Duration = 3
+                    })
+                    AutoFarmToggle:SetValue(false)
+                    break
+                end
+                
+                local targetPosition
+                if brainrotModel:IsA("Model") then
+                    local cframe = brainrotModel:GetBoundingBox()
+                    if cframe then
+                        targetPosition = cframe
+                    else
+                        local primaryPart = brainrotModel.PrimaryPart or brainrotModel:FindFirstChildWhichIsA("BasePart")
+                        if primaryPart then
+                            targetPosition = primaryPart.CFrame
+                        end
+                    end
+                elseif brainrotModel:IsA("BasePart") then
+                    targetPosition = brainrotModel.CFrame
+                end
+                
+                if not targetPosition then
+                    Fluent:Notify({
+                        Title = "Error",
+                        Content = "Could not find position to teleport!",
+                        Duration = 3
+                    })
+                    AutoFarmToggle:SetValue(false)
+                    break
+                end
+                
+                humanoidRootPart.CFrame = targetPosition + Vector3.new(0, 5, 0)
+                
+                Fluent:Notify({
+                    Title = "Teleporting",
+                    Content = "Collecting " .. selectedBrainrot .. "...",
+                    Duration = 2
+                })
+                
+                task.wait(0.5)
+                
+                local maxAttempts = 100
+                local attempts = 0
+                local collected = false
+                
+                local dropGui = player:WaitForChild("PlayerGui"):FindFirstChild("DropGui")
+                
+                local playerBase = getPlayerBase()
+                local baseSpawn = nil
+                if playerBase then
+                    baseSpawn = playerBase:FindFirstChild("Spawn")
+                end
+                
+                while attempts < maxAttempts and autoFarmEnabled do
+                    pressE()
+                    
+                    if dropGui and dropGui.Enabled == true then
+                        collected = true
+                        
+                        if baseSpawn then
+                            humanoidRootPart.CFrame = baseSpawn.CFrame + Vector3.new(0, 3, 0)
+                        end
+                        break
+                    end
+                    
+                    task.wait(0.05)
+                    attempts = attempts + 1
+                end
+                
+                if not collected then
+                    Fluent:Notify({
+                        Title = "Warning",
+                        Content = "Failed to collect brainrot!",
+                        Duration = 3
+                    })
+                    AutoFarmToggle:SetValue(false)
+                    break
+                end
+                
+                if baseSpawn then
+                    Fluent:Notify({
+                        Title = "Success",
+                        Content = "Returned to base!",
+                        Duration = 2
+                    })
+                    
+                    task.wait(0.5)
+                    
+                    local distanceFromBase = (humanoidRootPart.Position - baseSpawn.Position).Magnitude
+                    if distanceFromBase < 50 then
+                        AutoFarmToggle:SetValue(false)
+                        Fluent:Notify({
+                            Title = "Auto Farm",
+                            Content = "Completed! Auto farm disabled.",
+                            Duration = 3
+                        })
+                        break
+                    end
+                else
+                    Fluent:Notify({
+                        Title = "Warning",
+                        Content = "Spawn point not found in base!",
+                        Duration = 3
+                    })
+                    AutoFarmToggle:SetValue(false)
+                    break
+                end
+                
+                task.wait(1)
+            end
+        end)
+    else
+        if autoFarmConnection then
+            autoFarmConnection = nil
+        end
+    end
+end)
+
+Window:SelectTab(1)
+
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({})
+InterfaceManager:SetFolder("FluentScriptHub")
+SaveManager:SetFolder("FluentScriptHub/brainrot-teleporter")
+
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+
+SaveManager:LoadAutoloadConfig()
+
+Fluent:Notify({
+    Title = "Brainrot Teleporter",
+    Content = "Script loaded successfully!",
+    Duration = 5
+})
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+
+local logoGui = Instance.new("ScreenGui")
+logoGui.Name = "WnZGUI"
+logoGui.ResetOnSpawn = false
+logoGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+logoGui.Parent = player:WaitForChild("PlayerGui")
+
+local logoButton = Instance.new("ImageButton")
+logoButton.Name = "VeryNormalImage"
+logoButton.Size = UDim2.new(0, 50, 0, 50)
+logoButton.Position = UDim2.new(0, 10, 0, 10)
+logoButton.BackgroundTransparency = 1
+logoButton.Image = "rbxassetid://98905775020119"
+logoButton.Parent = logoGui
+
+local isMinimized = false
+local function toggleFluent()
+    isMinimized = not isMinimized
+    Window:Minimize(isMinimized)
+end
+
+logoButton.Activated:Connect(toggleFluent)
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if not gpe and input.KeyCode == Enum.KeyCode.LeftControl then
+        toggleFluent()
+    end
+end)
+    local slotList = {}
+    for i = 1, 30 do
+        table.insert(slotList, "Slot" .. i)
+    end
+    
+    local UpgradeBrainrotDropdown = Tabs.Miscellaneous:AddDropdown("UpgradeBrainrotSlots", {
+        Title = "Upgrade Brainrot From Slot",
+        Description = "Select slots to upgrade",
+        Values = slotList,
+        Multi = true,
+        Default = {},
+    })
+    
+    local upgradeBrainrotConnection = nil
+    local upgradeBrainrotEnabled = false
+    local selectedSlots = {}
+    
+    UpgradeBrainrotDropdown:OnChanged(function(Value)
+        selectedSlots = Value
+    end)
+    
+    local UpgradeBrainrotToggle = Tabs.Miscellaneous:AddToggle("UpgradeBrainrotToggle", {
+        Title = "Toggle [Upgrade Brainrot]",
+        Description = "Enable/disable upgrading brainrots (fires per 1s)",
+        Default = false
+    })
+    
+    UpgradeBrainrotToggle:OnChanged(function(Value)
+        upgradeBrainrotEnabled = Value
+        
+        if upgradeBrainrotConnection then
+            upgradeBrainrotConnection = nil
+        end
+        
+        if Value then
+            upgradeBrainrotConnection = task.spawn(function()
+                while upgradeBrainrotEnabled do
+                    for slot, enabled in pairs(selectedSlots) do
+                        if enabled then
+                            local args = {
+                                [1] = slot
+                            }
+                            pcall(function()
+                                game:GetService("ReplicatedStorage").RemoteFunctions.UpgradeBrainrot:InvokeServer(unpack(args))
+                            end)
+                        end
+                    end
+                    task.wait(1)
+                end
+            end)
+        end
+    end)
+    
+    local UpgradeSpeedDropdown = Tabs.Miscellaneous:AddDropdown("UpgradeSpeed", {
+        Title = "Upgrade Speed",
+        Description = "Select upgrade mode",
+        Values = {"1", "5", "10"},
+        Multi = false,
+        Default = 1,
+    })
+    
+    local upgradeSpeedConnection = nil
+    local upgradeSpeedEnabled = false
+    local selectedSpeed = 1
+    
+    UpgradeSpeedDropdown:OnChanged(function(Value)
+        selectedSpeed = tonumber(Value)
+    end)
+    
+    local UpgradeSpeedToggle = Tabs.Miscellaneous:AddToggle("UpgradeSpeedToggle", {
+        Title = "Toggle [Upgrade Speed]",
+        Description = "Enable/disable upgrading speed (fires per 0.5s)",
+        Default = false
+    })
+    
+    UpgradeSpeedToggle:OnChanged(function(Value)
+        upgradeSpeedEnabled = Value
+        
+        if upgradeSpeedConnection then
+            upgradeSpeedConnection = nil
+        end
+        
+        if Value then
+            upgradeSpeedConnection = task.spawn(function()
+                while upgradeSpeedEnabled do
+                    if selectedSpeed then
+                        local args = {
+                            [1] = selectedSpeed
+                        }
+                        pcall(function()
+                            game:GetService("ReplicatedStorage").RemoteFunctions.UpgradeSpeed:InvokeServer(unpack(args))
+                        end)
+                    end
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end)
+    
+    local upgradeCarryConnection = nil
+    local upgradeCarryEnabled = false
+    
+    local UpgradeCarryToggle = Tabs.Miscellaneous:AddToggle("UpgradeCarry", {
+        Title = "Upgrade Carry",
+        Description = "Automatically upgrade carry capacity (fires per 0.5s)",
+        Default = false
+    })
+    
+    UpgradeCarryToggle:OnChanged(function(Value)
+        upgradeCarryEnabled = Value
+        
+        if upgradeCarryConnection then
+            upgradeCarryConnection = nil
+        end
+        
+        if Value then
+            upgradeCarryConnection = task.spawn(function()
+                while upgradeCarryEnabled do
+                    pcall(function()
+                        game:GetService("ReplicatedStorage").RemoteFunctions.UpgradeCarry:InvokeServer()
+                    end)
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end)
+    
+    local upgradeBaseConnection = nil
+    local upgradeBaseEnabled = false
+    
+    local UpgradeBaseToggle = Tabs.Miscellaneous:AddToggle("UpgradeBase", {
+        Title = "Upgrade Base",
+        Description = "Automatically upgrade base (fires per 2s)",
+        Default = false
+    })
+    
+    UpgradeBaseToggle:OnChanged(function(Value)
+        upgradeBaseEnabled = Value
+        
+        if upgradeBaseConnection then
+            upgradeBaseConnection = nil
+        end
+        
+        if Value then
+            upgradeBaseConnection = task.spawn(function()
+                while upgradeBaseEnabled do
+                    pcall(function()
+                        game:GetService("ReplicatedStorage").RemoteFunctions.UpgradeBase:InvokeServer()
+                    end)
+                    task.wait(2)
+                end
+            end)
+        end
+    end)
+    
+    Tabs.Miscellaneous:AddButton({
+        Title = "Sell Brainrot (Hold the brainrot first)",
+        Description = "Sells the currently held brainrot",
+        Callback = function()
+            game:GetService("ReplicatedStorage").RemoteFunctions.SellTool:InvokeServer()
+            Fluent:Notify({
+                Title = "Sell",
+                Content = "Attempting to sell held brainrot!",
+                Duration = 2
+            })
+        end
+    })
+    
+    Tabs.Miscellaneous:AddButton({
+        Title = "Sell All Brainrot (Inventory)",
+        Description = "Sells all brainrots in your inventory",
+        Callback = function()
+            game:GetService("ReplicatedStorage").RemoteFunctions.SellAll:InvokeServer()
+            Fluent:Notify({
+                Title = "Sell All",
+                Content = "Selling all brainrots from inventory!",
+                Duration = 2
+            })
+        end
+    })
+end
+
+Window:SelectTab(1)
+
+Fluent:Notify({
+    Title = "Brainrot Teleporter",
+    Content = "Script loaded successfully!",
+    Duration = 5
+})
+
+SaveManager:LoadAutoloadConfig()
