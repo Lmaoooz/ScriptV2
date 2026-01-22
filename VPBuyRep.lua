@@ -492,6 +492,190 @@ sections.InfoSection:Paragraph({
     Body = "- Some items may cannot be purchased, it's not script's fault.\n- You can purchase any items even if they're not in stocks.\n- You can try to use Manual method if the item you want is not available in dropdown."
 })
 
+local repShopToggleConnection = nil
+
+sections.InfoSection:Toggle({
+    Name = "Reputation Shop UI",
+    Default = false,
+    Callback = function(value)
+        local player = game:GetService("Players").LocalPlayer
+        local repStoreGui = player.PlayerGui:FindFirstChild("Reputation Store")
+        
+        -- Disconnect previous connection if exists
+        if repShopToggleConnection then
+            repShopToggleConnection:Disconnect()
+            repShopToggleConnection = nil
+        end
+        
+        if repStoreGui then
+            -- GUI exists, just toggle it
+            repStoreGui.Enabled = value
+            Window:Notify({
+                Title = "Reputation Shop UI",
+                Description = (value and "Opened" or "Closed") .. " Reputation Shop",
+                Lifetime = 3
+            })
+            
+            -- Monitor if GUI gets destroyed while toggle is on
+            if value then
+                repShopToggleConnection = repStoreGui.AncestryChanged:Connect(function(_, parent)
+                    if not parent then
+                        -- GUI was destroyed
+                        Window:Dialog({
+                            Title = "Reputation Shop UI",
+                            Description = "Couldn't detect Reputation Shop GUI, would you like to teleport into it?",
+                            Buttons = {
+                                {
+                                    Name = "Yes",
+                                    Callback = function()
+                                        task.spawn(function()
+                                            task.wait(0.3)
+                                            -- Teleport and open shop
+                                            local success, err = pcall(function()
+                                                local proximityPrompt = workspace.Npc.Misc["Reputation Store"].ProximityPrompt
+                                                local originalHoldDuration = proximityPrompt.HoldDuration
+                                                proximityPrompt.HoldDuration = 0
+                                                
+                                                player.Character:PivotTo(CFrame.new(Vector3.new(-913.936157, 135.355194, 317.129181)))
+                                                task.wait(0.3)
+                                                
+                                                local VIM = game:GetService("VirtualInputManager")
+                                                local maxAttempts = 20
+                                                local attempts = 0
+                                                local newRepStoreGui = nil
+                                                
+                                                while attempts < maxAttempts do
+                                                    newRepStoreGui = player.PlayerGui:FindFirstChild("Reputation Store")
+                                                    if newRepStoreGui then
+                                                        newRepStoreGui.Enabled = true
+                                                        Window:Notify({
+                                                            Title = "Success",
+                                                            Description = "Reputation Shop opened!",
+                                                            Lifetime = 3
+                                                        })
+                                                        break
+                                                    end
+                                                    
+                                                    VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                                                    task.wait(0.05)
+                                                    VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+                                                    task.wait(0.2)
+                                                    
+                                                    attempts = attempts + 1
+                                                end
+                                                
+                                                if not newRepStoreGui then
+                                                    Window:Notify({
+                                                        Title = "Error",
+                                                        Description = "Failed to open Reputation Store!",
+                                                        Lifetime = 5
+                                                    })
+                                                end
+                                                
+                                                proximityPrompt.HoldDuration = originalHoldDuration
+                                            end)
+                                            
+                                            if not success then
+                                                Window:Notify({
+                                                    Title = "Error",
+                                                    Description = "Failed: " .. tostring(err),
+                                                    Lifetime = 5
+                                                })
+                                            end
+                                        end)
+                                    end,
+                                },
+                                {
+                                    Name = "No",
+                                    Callback = function()
+                                        -- Do nothing
+                                    end
+                                }
+                            }
+                        })
+                    end
+                end)
+            end
+        else
+            -- GUI doesn't exist
+            if value then
+                -- User tried to enable it
+                Window:Dialog({
+                    Title = "Reputation Shop UI",
+                    Description = "Couldn't detect Reputation Shop GUI, would you like to teleport into it?",
+                    Buttons = {
+                        {
+                            Name = "Yes",
+                            Callback = function()
+                                task.spawn(function()
+                                    task.wait(0.3)
+                                    -- Teleport and open shop
+                                    local success, err = pcall(function()
+                                        local proximityPrompt = workspace.Npc.Misc["Reputation Store"].ProximityPrompt
+                                        local originalHoldDuration = proximityPrompt.HoldDuration
+                                        proximityPrompt.HoldDuration = 0
+                                        
+                                        player.Character:PivotTo(CFrame.new(Vector3.new(-913.936157, 135.355194, 317.129181)))
+                                        task.wait(0.3)
+                                        
+                                        local VIM = game:GetService("VirtualInputManager")
+                                        local maxAttempts = 20
+                                        local attempts = 0
+                                        
+                                        while attempts < maxAttempts do
+                                            repStoreGui = player.PlayerGui:FindFirstChild("Reputation Store")
+                                            if repStoreGui then
+                                                repStoreGui.Enabled = true
+                                                Window:Notify({
+                                                    Title = "Success",
+                                                    Description = "Reputation Shop opened!",
+                                                    Lifetime = 3
+                                                })
+                                                break
+                                            end
+                                            
+                                            VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                                            task.wait(0.05)
+                                            VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+                                            task.wait(0.2)
+                                            
+                                            attempts = attempts + 1
+                                        end
+                                        
+                                        if not repStoreGui then
+                                            Window:Notify({
+                                                Title = "Error",
+                                                Description = "Failed to open Reputation Store!",
+                                                Lifetime = 5
+                                            })
+                                        end
+                                        
+                                        proximityPrompt.HoldDuration = originalHoldDuration
+                                    end)
+                                    
+                                    if not success then
+                                        Window:Notify({
+                                            Title = "Error",
+                                            Description = "Failed: " .. tostring(err),
+                                            Lifetime = 5
+                                        })
+                                    end
+                                end)
+                            end,
+                        },
+                        {
+                            Name = "No",
+                            Callback = function()
+                                -- Do nothing
+                            end
+                        }
+                    }
+                })
+            end
+        end
+    end,
+}, "RepShopToggle")
+
 MacLib:SetFolder("VersePieceRepShop")
 tabs.Settings:InsertConfigSection("Left")
 
