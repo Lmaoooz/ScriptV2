@@ -1,7 +1,7 @@
 -- It's 100% Ai generated, could you believe that?
 local targetPlaceId = 86639052909924
 if game.PlaceId ~= targetPlaceId then
-    warn("Wrong game buddy, It's for: " .. targetPlaceId)
+    warn("Wrong game buddy, It's for: Verse Piece > " .. targetPlaceId)
     return
 end
 
