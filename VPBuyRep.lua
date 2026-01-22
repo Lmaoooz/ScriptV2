@@ -1,32 +1,28 @@
--- Check if in correct place
 local targetPlaceId = 86639052909924
 if game.PlaceId ~= targetPlaceId then
     warn("Wrong game! This script only works in Place ID: " .. targetPlaceId)
     return
 end
 
--- Wait for game to be fully loaded
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
--- Get place name
 local placeName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
 
 local MacLib = loadstring(game:HttpGet("https://github.com/biggaboy212/Maclib/releases/latest/download/maclib.txt"))()
 
 local Window = MacLib:Window({
-    Title = "Auto Buy Script",
+    Title = "Reputation Shop Purchaser",
     Subtitle = placeName,
     Size = UDim2.fromOffset(868, 650),
     DragStyle = 2,
     DisabledWindowControls = {},
-    ShowUserInfo = true,
+    ShowUserInfo = false,
     Keybind = Enum.KeyCode.RightControl,
     AcrylicBlur = true,
 })
 
--- Find and resize Base frame in CoreGui
 task.spawn(function()
     for _, obj in pairs(game:GetService("CoreGui"):GetChildren()) do
         local screenGui = obj:FindFirstChild("ScreenGui")
@@ -84,7 +80,7 @@ local tabGroups = {
 }
 
 local tabs = {
-    Buy = tabGroups.TabGroup1:Tab({ Name = "Buy", Image = "rbxassetid://10734950309" }),
+    Buy = tabGroups.TabGroup1:Tab({ Name = "Purchase Menu", Image = "rbxassetid://10734950309" }),
     Settings = tabGroups.TabGroup1:Tab({ Name = "Settings", Image = "rbxassetid://10734950309" })
 }
 
@@ -136,9 +132,8 @@ local ItemDropdown = sections.BuySection:Dropdown({
     end,
 }, "ItemDropdown")
 
--- Buy Items button
 sections.BuySection:Button({
-    Name = "Buy Items",
+    Name = "Buy Items (Dropdown)",
     Callback = function()
         local selectedItem = ItemDropdown.Value
         
@@ -310,7 +305,6 @@ local manualItemInput = sections.BuySection:Input({
     end,
 }, "ManualItemInput")
 
--- Buy button for manual input
 sections.BuySection:Button({
     Name = "Buy Item (Manual)",
     Callback = function()
@@ -492,15 +486,15 @@ sections.BuySection:Button({
 
 -- Right section paragraph
 sections.InfoSection:Paragraph({
-    Header = "Reminder",
-    Body = "Some items may cannot be purchased, it's not script bugs."
+    Header = "Information",
+    Body = "- Some items may cannot be purchased, it's not script bugs.\n- You can purchase any items even if they're not in stocks"
 })
 
-MacLib:SetFolder("AutoBuyScript")
+MacLib:SetFolder("VersePieceRepShop")
 tabs.Settings:InsertConfigSection("Left")
 
 Window.onUnloaded(function()
-    print("Auto Buy Script Unloaded!")
+    print("Script Unloaded!")
 end)
 
 tabs.Buy:Select()
