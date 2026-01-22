@@ -243,7 +243,7 @@ sections.BuySection:Button({
         -- Show dialog on first time
         if firstTimeBuying then
             Window:Dialog({
-                Title = "Auto Buy Script",
+                Title = "Stop right there.",
                 Description = "First time pressing the button, would you like to teleport and open the shop first?",
                 Buttons = {
                     {
@@ -608,7 +608,7 @@ sections.MiscSection:Toggle({
             if value then
                 -- User tried to enable it
                 Window:Dialog({
-                    Title = "Reputation Shop UI",
+                    Title = "Missing Reputation Shop GUI",
                     Description = "Couldn't detect Reputation Shop GUI, would you like to teleport into it?",
                     Buttons = {
                         {
