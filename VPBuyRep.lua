@@ -116,14 +116,14 @@ local availableItems = getAvailableItems()
 local firstTimeBuying = true
 
 sections.BuySection:Header({
-    Name = "Buy with Dropdown"
+    Name = "Buy with Dropdown method"
 })
 
 -- Dropdown for selecting items
 local ItemDropdown = sections.BuySection:Dropdown({
     Name = "Select Items",
     Search = true,
-    Multi = false,
+    Multi = true,
     Required = true,
     Options = availableItems,
     Default = 1,
@@ -287,7 +287,7 @@ sections.BuySection:Divider()
 
 -- Manual input section
 sections.BuySection:Header({
-    Name = "Buy with Manual Input"
+    Name = "Buy with Manual method"
 })
 
 local manualItemValue = ""
@@ -487,7 +487,7 @@ sections.BuySection:Button({
 -- Right section paragraph
 sections.InfoSection:Paragraph({
     Header = "Information",
-    Body = "- Some items may cannot be purchased, it's not script's fault.\n- You can purchase any items even if they're not in stocks.\n- You can try to use Manual method if the item you want not exist in dropdown."
+    Body = "- Some items may cannot be purchased, it's not script's fault.\n- You can purchase any items even if they're not in stocks.\n- You can try to use Manual method if the item you want is not available in dropdown."
 })
 
 MacLib:SetFolder("VersePieceRepShop")
