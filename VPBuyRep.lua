@@ -89,6 +89,7 @@ local tabs = {
 local sections = {
     BuySection = tabs.Buy:Section({ Side = "Left" }),
     InfoSection = tabs.Buy:Section({ Side = "Right" }),
+    MiscSection = tabs.Buy:Section({ Side = "Right" }),
 }
 
 -- Function to get all available items
@@ -492,10 +493,16 @@ sections.InfoSection:Paragraph({
     Body = "- Some items may cannot be purchased, it's not script's fault.\n- You can purchase any items even if they're not in stocks.\n- You can try to use Manual method if the item you want is not available in dropdown."
 })
 
+-- Misc Section
+sections.InfoSection:Paragraph({
+    Header = "How to fix",
+    Body = "Can't interact with NPC'S?\n1. Enable this toggle below.\n2. Once you opened the Reputation Shop, then press [Close].\n- Problem Fixed. Now you can interact with NPC'S."
+})
+
 local repShopToggleConnection = nil
 
-sections.InfoSection:Toggle({
-    Name = "Reputation Shop UI",
+sections.MiscSection:Toggle({
+    Name = "Toggle Reputation Shop UI",
     Default = false,
     Callback = function(value)
         local player = game:GetService("Players").LocalPlayer
