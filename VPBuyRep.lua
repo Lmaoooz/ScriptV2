@@ -1,4 +1,5 @@
--- It's 100% Ai generated, could you believe that?
+-- Code Made By Claude AI
+-- Prompt Made By Me
 local targetPlaceId = 86639052909924
 if game.PlaceId ~= targetPlaceId then
     warn("Wrong game buddy, It's for: Verse Piece > " .. targetPlaceId)
