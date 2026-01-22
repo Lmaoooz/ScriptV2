@@ -494,7 +494,7 @@ sections.InfoSection:Paragraph({
 })
 
 -- Misc Section
-sections.InfoSection:Paragraph({
+sections.MiscSection:Paragraph({
     Header = "How to fix",
     Body = "Can't interact with NPC'S?\n1. Enable this toggle below.\n2. Once you opened the Reputation Shop, then press [Close].\n- Problem Fixed. Now you can interact with NPC'S."
 })
