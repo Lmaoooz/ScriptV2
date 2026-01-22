@@ -38,7 +38,7 @@ end)
 
 local globalSettings = {
     UIBlurToggle = Window:GlobalSetting({
-        Name = "UI Blur",
+        Name = "UI Blur (Optional)",
         Default = Window:GetAcrylicBlurState(),
         Callback = function(bool)
             Window:SetAcrylicBlurState(bool)
@@ -62,7 +62,7 @@ local globalSettings = {
         end,
     }),
     ShowUserInfo = Window:GlobalSetting({
-        Name = "Show User Info",
+        Name = "User Info Visibility (Optional)",
         Default = Window:GetUserInfoState(),
         Callback = function(bool)
             Window:SetUserInfoState(bool)
@@ -293,7 +293,7 @@ sections.BuySection:Header({
 local manualItemValue = ""
 
 local manualItemInput = sections.BuySection:Input({
-    Name = "Write items you want to buy",
+    Name = "Enter an item name you want to buy",
     Placeholder = "Enter item name",
     AcceptedCharacters = "All",
     Callback = function(input)
@@ -457,8 +457,8 @@ sections.BuySection:Button({
         -- Show dialog on first time
         if firstTimeBuying then
             Window:Dialog({
-                Title = "Auto Buy Script",
-                Description = "First time pressing the button, would you like to teleport and open the shop first?",
+                Title = "Stop right there.",
+                Description = "Seemed like it's your first time pressing the button, would you like to teleport and open the shop first?",
                 Buttons = {
                     {
                         Name = "Yes",
@@ -487,7 +487,7 @@ sections.BuySection:Button({
 -- Right section paragraph
 sections.InfoSection:Paragraph({
     Header = "Information",
-    Body = "- Some items may cannot be purchased, it's not script bugs.\n- You can purchase any items even if they're not in stocks"
+    Body = "- Some items may cannot be purchased, it's not script's fault.\n- You can purchase any items even if they're not in stocks.\n- You can try to use Manual method if the item you want not exist in dropdown."
 })
 
 MacLib:SetFolder("VersePieceRepShop")
