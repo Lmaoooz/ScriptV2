@@ -1,5 +1,4 @@
 -- It's 100% Ai generated, could you believe that?
-
 local targetPlaceId = 86639052909924
 if game.PlaceId ~= targetPlaceId then
     warn("Wrong game! This script only works in Place ID: " .. targetPlaceId)
