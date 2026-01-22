@@ -82,8 +82,8 @@ local tabGroups = {
 }
 
 local tabs = {
-    Buy = tabGroups.TabGroup1:Tab({ Name = "Purchase Menu", Image = "rbxassetid://10734950309" }),
-    Settings = tabGroups.TabGroup1:Tab({ Name = "Settings", Image = "rbxassetid://10734950309" })
+    Buy = tabGroups.TabGroup1:Tab({ Name = "Purchase Menu", Image = "rbxassetid://114505581952233" }),
+    Settings = tabGroups.TabGroup1:Tab({ Name = "Settings", Image = "rbxassetid://18801194936" })
 }
 
 local sections = {
