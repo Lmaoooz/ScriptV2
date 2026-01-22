@@ -685,3 +685,51 @@ end)
 
 tabs.Buy:Select()
 MacLib:LoadAutoLoadConfig()
+
+-- Create open/close button
+local OpenCloseGui = Instance.new("ScreenGui")
+OpenCloseGui.Name = "RepShopToggleButton"
+OpenCloseGui.ResetOnSpawn = false
+OpenCloseGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+OpenCloseGui.Parent = game:GetService("CoreGui")
+
+local ButtonFrame = Instance.new("Frame")
+ButtonFrame.Name = "ButtonFrame"
+ButtonFrame.Size = UDim2.fromOffset(60, 60)
+ButtonFrame.Position = UDim2.new(0.5, -30, 0, 10) -- Middle top, offset by half width
+ButtonFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ButtonFrame.BorderSizePixel = 0
+ButtonFrame.Active = true
+ButtonFrame.Draggable = true
+ButtonFrame.Parent = OpenCloseGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = ButtonFrame
+
+local IconButton = Instance.new("ImageButton")
+IconButton.Name = "IconButton"
+IconButton.Size = UDim2.fromScale(1, 1)
+IconButton.Position = UDim2.fromScale(0, 0)
+IconButton.BackgroundTransparency = 1
+IconButton.Image = "rbxassetid://118786472658875"
+IconButton.ScaleType = Enum.ScaleType.Fit
+IconButton.Parent = ButtonFrame
+
+-- Function to find and toggle MacLib UI
+local function toggleMacLibUI()
+    for _, obj in pairs(game:GetService("CoreGui"):GetChildren()) do
+        local screenGui = obj:FindFirstChild("ScreenGui")
+        if screenGui then
+            local base = screenGui:FindFirstChild("Base")
+            if base and base:IsA("Frame") then
+                screenGui.Enabled = not screenGui.Enabled
+                return
+            end
+        end
+    end
+end
+
+IconButton.MouseButton1Click:Connect(function()
+    toggleMacLibUI()
+end)
