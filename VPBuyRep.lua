@@ -123,7 +123,7 @@ sections.BuySection:Header({
 local ItemDropdown = sections.BuySection:Dropdown({
     Name = "Select Items",
     Search = true,
-    Multi = true,
+    Multi = false,
     Required = true,
     Options = availableItems,
     Default = 1,
