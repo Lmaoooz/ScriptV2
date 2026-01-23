@@ -596,69 +596,50 @@ end)
 tabs.Buy:Select()
 MacLib:LoadAutoLoadConfig()
 
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local player = Players.LocalPlayer
+-- Create open/close button
+local OpenCloseGui = Instance.new("ScreenGui")
+OpenCloseGui.Name = "RepShopToggleButton"
+OpenCloseGui.ResetOnSpawn = false
+OpenCloseGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+OpenCloseGui.Parent = game:GetService("CoreGui")
 
-local logoGui = Instance.new("ScreenGui")
-logoGui.Name = "WnZGUI"
-logoGui.ResetOnSpawn = false
-logoGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-logoGui.Parent = player:WaitForChild("PlayerGui")
+local ButtonFrame = Instance.new("Frame")
+ButtonFrame.Name = "ButtonFrame"
+ButtonFrame.Size = UDim2.fromOffset(60, 60)
+ButtonFrame.Position = UDim2.new(0, 10, 0, 10)
+ButtonFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ButtonFrame.BorderSizePixel = 0
+ButtonFrame.Active = true
+ButtonFrame.Draggable = true
+ButtonFrame.Parent = OpenCloseGui
 
-local logoButton = Instance.new("ImageButton")
-logoButton.Name = "VeryNormalImage"
-logoButton.Size = UDim2.new(0, 50, 0, 50)
-logoButton.Position = UDim2.new(0, 10, 0, 10)
-logoButton.BackgroundTransparency = 1
-logoButton.Image = "rbxassetid://98905775020119"
-logoButton.Parent = logoGui
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = ButtonFrame
 
-local dragging = false
-local dragStart
-local startPos
+local IconButton = Instance.new("ImageButton")
+IconButton.Name = "IconButton"
+IconButton.Size = UDim2.fromScale(1, 1)
+IconButton.Position = UDim2.fromScale(0, 0)
+IconButton.BackgroundTransparency = 1
+IconButton.Image = "rbxassetid://118786472658875"
+IconButton.ScaleType = Enum.ScaleType.Fit
+IconButton.Parent = ButtonFrame
 
-logoButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch
-    or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = logoButton.Position
+-- Function to find and toggle MacLib UI
+local function toggleMacLibUI()
+    for _, obj in pairs(game:GetService("CoreGui"):GetChildren()) do
+        local screenGui = obj:FindFirstChild("ScreenGui")
+        if screenGui then
+            local base = screenGui:FindFirstChild("Base")
+            if base and base:IsA("Frame") then
+                screenGui.Enabled = not screenGui.Enabled
+                return
+            end
+        end
     end
-end)
-
-logoButton.InputChanged:Connect(function(input)
-    if dragging and (
-        input.UserInputType == Enum.UserInputType.Touch
-        or input.UserInputType == Enum.UserInputType.MouseMovement
-    ) then
-        local delta = input.Position - dragStart
-        logoButton.Position = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
-        )
-    end
-end)
-
-logoButton.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch
-    or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-
-local isMinimized = false
-local function toggleFluent()
-    isMinimized = not isMinimized
-    Window:Minimize(isMinimized)
 end
 
-logoButton.Activated:Connect(toggleFluent)
-
-UserInputService.InputBegan:Connect(function(input, gpe)
-    if not gpe and input.KeyCode == Enum.KeyCode.LeftControl then
-        toggleFluent()
-    end
+IconButton.MouseButton1Click:Connect(function()
+    toggleMacLibUI()
 end)
