@@ -150,6 +150,8 @@ local dropdownAmountInput = sections.BuySection:Input({
     end,
 }, "DropdownAmountInput")
 
+sections.BuySection:Divider()
+
 sections.BuySection:Button({
     Name = "Buy Items (Dropdown)",
     Callback = function()
@@ -333,6 +335,8 @@ local manualAmountInput = sections.BuyManualSection:Input({
         manualAmountValue = input
     end,
 }, "ManualAmountInput")
+
+sections.BuyManualSection:Divider()
 
 sections.BuyManualSection:Button({
     Name = "Buy Item (Manual)",
