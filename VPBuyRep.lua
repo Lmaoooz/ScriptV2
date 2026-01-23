@@ -555,31 +555,56 @@ sections.InfoSection:Paragraph({
 -- Misc Section
 sections.MiscSection:Paragraph({
     Header = "How to fix",
-    Body = "Can't interact with NPC'S?\n- Press this button below and\n- Problem Fixed. Now you can interact with NPC'S."
+    Body = "Can't interact with NPC'S?\n- Enable this toggle below and\n- Problem Fixed. Now you can interact with NPC'S."
 })
 
-sections.MiscSection:Button({
-    Name = "Destroy Reputation Shop GUI",
-    Callback = function()
-        local player = game:GetService("Players").LocalPlayer
-        local repStoreGui = player.PlayerGui:FindFirstChild("Reputation Store")
-        
-        if repStoreGui then
-            repStoreGui:Destroy()
-            Window:Notify({
-                Title = "Success",
-                Description = "Reputation Shop GUI destroyed!",
-                Lifetime = 3
-            })
-        else
-            Window:Notify({
-                Title = "Error",
-                Description = "Reputation Shop GUI not found!",
-                Lifetime = 3
-            })
+sections.MiscSection:Toggle({
+    Name = "Automatically close reputation GUI",
+    Default = false,
+    Callback = function(value)
+        if value then
+            task.spawn(function()
+                local player = game:GetService("Players").LocalPlayer
+                local repStoreGui = player.PlayerGui:FindFirstChild("Reputation Store")
+                
+                if repStoreGui then
+                    -- Make GUI visible
+                    repStoreGui.Enabled = true
+                    task.wait(0.2)
+                    
+                    -- Set SelectedObject to Cancel button
+                    local cancelButton = repStoreGui.BG.Iinv.Cancel
+                    game:GetService("GuiService").SelectedObject = cancelButton
+                    task.wait(0.1)
+                    
+                    -- Press Enter key
+                    local VIM = game:GetService("VirtualInputManager")
+                    VIM:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+                    task.wait(0.05)
+                    VIM:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+                    
+                    task.wait(0.2)
+                    
+                    Window:Notify({
+                        Title = "Success",
+                        Description = "Reputation Shop GUI closed!",
+                        Lifetime = 3
+                    })
+                else
+                    Window:Notify({
+                        Title = "Error",
+                        Description = "Reputation Shop GUI not found!",
+                        Lifetime = 3
+                    })
+                end
+                
+                -- Automatically disable the toggle
+                task.wait(0.1)
+                -- The toggle will turn off automatically after execution
+            end)
         end
     end,
-})
+}, "AutoCloseRepShop")
 
 MacLib:SetFolder("VersePieceRepShop")
 tabs.Settings:InsertConfigSection("Left")
