@@ -88,6 +88,7 @@ local tabs = {
 
 local sections = {
     BuySection = tabs.Buy:Section({ Side = "Left" }),
+    BuyManualSection = tabs.Buy:Section({ Side = "Left" }),
     InfoSection = tabs.Buy:Section({ Side = "Right" }),
     MiscSection = tabs.Buy:Section({ Side = "Right" }),
 }
@@ -299,32 +300,14 @@ local function executeBuy()
     end,
 })
 
-sections.BuySection:Divider()
-
--- Refresh items button
-sections.BuySection:Button({
-    Name = "Refresh Items List",
-    Callback = function()
-        local newItems = getAvailableItems()
-        ItemDropdown:UpdateSelection(newItems[1])
-        Window:Notify({
-            Title = "Success",
-            Description = "Items list refreshed!",
-            Lifetime = 3
-        })
-    end,
-})
-
-sections.BuySection:Divider()
-
 -- Manual input section
-sections.BuySection:Header({
+sections.BuyManualSection:Header({
     Name = "Buy with Manual method"
 })
 
 local manualItemValue = ""
 
-local manualItemInput = sections.BuySection:Input({
+local manualItemInput = sections.BuyManualSection:Input({
     Name = "Enter an item name you want to buy",
     Placeholder = "Enter item name",
     AcceptedCharacters = "All",
@@ -339,7 +322,7 @@ local manualItemInput = sections.BuySection:Input({
 
 local manualAmountValue = "1"
 
-local manualAmountInput = sections.BuySection:Input({
+local manualAmountInput = sections.BuyManualSection:Input({
     Name = "Amount of items to buy",
     Placeholder = "Enter amount (e.g., 5)",
     AcceptedCharacters = "Numbers",
@@ -351,7 +334,7 @@ local manualAmountInput = sections.BuySection:Input({
     end,
 }, "ManualAmountInput")
 
-sections.BuySection:Button({
+sections.BuyManualSection:Button({
     Name = "Buy Item (Manual)",
     Callback = function()
         local manualItem = manualItemValue
