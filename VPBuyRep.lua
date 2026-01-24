@@ -89,7 +89,6 @@ local tabs = {
 local sections = {
     BuySection = tabs.Buy:Section({ Side = "Left" }),
     BuyManualSection = tabs.Buy:Section({ Side = "Left" }),
-    StatSection = tabs.Buy:Section({ Side = "Right" }),
     InfoSection = tabs.Buy:Section({ Side = "Right" }),
     MiscSection = tabs.Buy:Section({ Side = "Right" }),
     HowSection = tabs.Buy:Section({ Side = "Right" }),
@@ -484,7 +483,7 @@ local function executeManualBuy()
     if not amount or amount <= 0 then
         Window:Notify({
             Title = "Error",
-            Description = "Please enter a valid amount (number greater than 0)!",
+            Description = "Please enter a valid amount (At least 1)!",
             Lifetime = 5
         })
         return
@@ -605,7 +604,7 @@ local function executeManualBuy()
         else
             Window:Notify({
                 Title = "Failed",
-                Description = "No items purchased. Check item name or availability.",
+                Description = "No items detected. Enter the correct item name or your Reputation couldn't afford this item.",
                 Lifetime = 5
             })
         end
@@ -654,39 +653,6 @@ local function executeManualBuy()
         end
     end,
 })
-
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-
-local function formatNumber(n)
-    local s = tostring(n)
-    return s:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
-end
-
-local RepParagraph = sections.StatSection:Paragraph({
-    Header = "Reputation Points",
-    Body = "Loading..."
-})
-
-local function setupTracker()
-    local leaderstats = player:WaitForChild("leaderstats", 10)
-    if not leaderstats then return end
-
-    local rep = leaderstats:WaitForChild("Reputation", 10)
-    if not rep then return end
-
-    RepParagraph:Set({
-        Body = formatNumber(rep.Value)
-    })
-
-    rep:GetPropertyChangedSignal("Value"):Connect(function()
-        RepParagraph:Set({
-            Body = formatNumber(rep.Value)
-        })
-    end)
-end
-
-task.spawn(setupTracker)
 
 -- Right section paragraph
 sections.InfoSection:Paragraph({
