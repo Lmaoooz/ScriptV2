@@ -91,6 +91,8 @@ local sections = {
     BuyManualSection = tabs.Buy:Section({ Side = "Left" }),
     InfoSection = tabs.Buy:Section({ Side = "Right" }),
     MiscSection = tabs.Buy:Section({ Side = "Right" }),
+    StatSection = tabs.Buy:Section({ Side = "Right" }),
+    HowSection = tabs.Buy:Section({ Side = "Right" }),
 }
 
 -- Hardcoded list of all buyable items with prices
@@ -653,6 +655,26 @@ local function executeManualBuy()
     end,
 })
 
+-- Stat Section - Reputation Monitor
+local repParagraph = sections.StatSection:Paragraph({
+    Header = "Reputation Points",
+    Body = "Loading..."
+})
+
+task.spawn(function()
+    local player = game:GetService("Players").LocalPlayer
+    local leaderstats = player:WaitForChild("leaderstats")
+    local reputation = leaderstats:WaitForChild("Reputation")
+    
+    -- Initial update
+    repParagraph:SetDesc(tostring(reputation.Value))
+    
+    -- Monitor for changes
+    reputation:GetPropertyChangedSignal("Value"):Connect(function()
+        repParagraph:SetDesc(tostring(reputation.Value))
+    end)
+end)
+
 -- Right section paragraph
 sections.InfoSection:Paragraph({
     Header = "Information",
@@ -703,6 +725,25 @@ sections.MiscSection:Button({
                 })
             end
         end)
+    end,
+})
+
+-- How Section
+sections.HowSection:Paragraph({
+    Header = "How to farm reputation",
+    Body = "The only way to farm reputation point is\nYou must do \"Wandenreich Missions\" and must have one of these titles below\n1. \"Guardian of Nazarick\"\n2. \"The Chaos Sovereign\"\n3. \"King of Heroes\"."
+})
+
+sections.HowSection:Button({
+    Name = "Teleport to Missions",
+    Callback = function()
+        local player = game:GetService("Players").LocalPlayer
+        player.Character:PivotTo(CFrame.new(Vector3.new(-246.068054, 25.903271, 331.468445)))
+        Window:Notify({
+            Title = "Teleported",
+            Description = "Teleported to Wandenreich Missions!",
+            Lifetime = 3
+        })
     end,
 })
 
