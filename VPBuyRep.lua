@@ -231,8 +231,11 @@ local firstTimeBuying = true
 
 -- Helper function to extract item name from dropdown selection
 local function extractItemName(fullText)
-    -- Remove everything after " - " to get just the item name
-    return fullText:match("(.+)%s*-%s*%d")
+    local dashPos = fullText:find(" %- ")
+    if dashPos then
+        return fullText:sub(1, dashPos - 1)
+    end
+    return fullText
 end
 
 sections.BuySection:Header({
