@@ -99,7 +99,7 @@ local availableItems = {
     "Ability Storage - 350",
     "Aizen Eyepatch - 7,500",
     "American Flag - 100,000",
-    "Anibus Sword - 75,000",
+    "Anubis Sword - 75,000",
     "Angel Wing - 750",
     "Ant King Head - 65,000",
     "Ashen Ring - 1,500,000",
@@ -165,12 +165,12 @@ local availableItems = {
     "Magic Eye - 80,000",
     "Magic Treasure Vault - 75,000",
     "Matoi Staff - 120,000",
-    "Memory Shards - 75,000",
+    "Memory shards - 75,000",
     "Mimicry - 5,000",
     "Motivated Chair - 35,000",
     "Mysterious Arrow - 2,500",
     "Okarun Glasses - 20,000",
-    "Phoenix Mantle - 75,000",
+    "Phoenix mantle - 75,000",
     "President Gun - 20,000",
     "Prestige Key - 75,000",
     "Previous Boss Ticket - 350",
@@ -178,7 +178,7 @@ local availableItems = {
     "Race Reroll - 100",
     "Race Storage - 350",
     "Raid Boss Ticket - 500",
-    "Reason Eliminating Matter - 25,000",
+    "Reason eliminating matter - 25,000",
     "Recovery Artifact - 1,000",
     "Remove Relic Potion - 350",
     "Remove Wisp Potion - 350",
@@ -224,7 +224,8 @@ local availableItems = {
     "Yamato's Sword - 35,000",
     "Zangetsu Soul - 500",
     "Zenitsu's Sword - 5,000",
-    "Zeff Book - 1,200,000"
+    "Zeff Book - 1,200,000",
+    "2nd Gear - 25,000"
 }
 
 local firstTimeBuying = true
