@@ -655,31 +655,38 @@ local function executeManualBuy()
     end,
 })
 
--- Alternative: Use a label that updates
-sections.StatSection:Header({
-    Name = "Reputation Points"
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local function formatNumber(n)
+    local s = tostring(n)
+    return s:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
+end
+
+local RepParagraph = sections.StatSection:Paragraph({
+    Header = "Reputation Points",
+    Body = "Loading..."
 })
 
-local repLabel = sections.StatSection:Label({
-    Text = "Loading..."
-})
-
-task.spawn(function()
-    local player = game:GetService("Players").LocalPlayer
+local function setupTracker()
     local leaderstats = player:WaitForChild("leaderstats", 10)
-    local reputation = leaderstats and leaderstats:WaitForChild("Reputation", 10)
-    
-    if reputation then
-        local function updateRep()
-            pcall(function()
-                repLabel:SetText(tostring(reputation.Value))
-            end)
-        end
-        
-        updateRep()
-        reputation:GetPropertyChangedSignal("Value"):Connect(updateRep)
-    end
-end)
+    if not leaderstats then return end
+
+    local rep = leaderstats:WaitForChild("Reputation", 10)
+    if not rep then return end
+
+    RepParagraph:Set({
+        Body = formatNumber(rep.Value)
+    })
+
+    rep:GetPropertyChangedSignal("Value"):Connect(function()
+        RepParagraph:Set({
+            Body = formatNumber(rep.Value)
+        })
+    end)
+end
+
+task.spawn(setupTracker)
 
 -- Right section paragraph
 sections.InfoSection:Paragraph({
