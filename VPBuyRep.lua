@@ -89,9 +89,9 @@ local tabs = {
 local sections = {
     BuySection = tabs.Buy:Section({ Side = "Left" }),
     BuyManualSection = tabs.Buy:Section({ Side = "Left" }),
+    StatSection = tabs.Buy:Section({ Side = "Right" }),
     InfoSection = tabs.Buy:Section({ Side = "Right" }),
     MiscSection = tabs.Buy:Section({ Side = "Right" }),
-    StatSection = tabs.Buy:Section({ Side = "Right" }),
     HowSection = tabs.Buy:Section({ Side = "Right" }),
 }
 
@@ -655,24 +655,30 @@ local function executeManualBuy()
     end,
 })
 
--- Stat Section - Reputation Monitor
-local repParagraph = sections.StatSection:Paragraph({
-    Header = "Reputation Points",
-    Body = "Loading..."
+-- Alternative: Use a label that updates
+sections.StatSection:Header({
+    Name = "Reputation Points"
+})
+
+local repLabel = sections.StatSection:Label({
+    Text = "Loading..."
 })
 
 task.spawn(function()
     local player = game:GetService("Players").LocalPlayer
-    local leaderstats = player:WaitForChild("leaderstats")
-    local reputation = leaderstats:WaitForChild("Reputation")
+    local leaderstats = player:WaitForChild("leaderstats", 10)
+    local reputation = leaderstats and leaderstats:WaitForChild("Reputation", 10)
     
-    -- Initial update
-    repParagraph:SetDesc(tostring(reputation.Value))
-    
-    -- Monitor for changes
-    reputation:GetPropertyChangedSignal("Value"):Connect(function()
-        repParagraph:SetDesc(tostring(reputation.Value))
-    end)
+    if reputation then
+        local function updateRep()
+            pcall(function()
+                repLabel:SetText(tostring(reputation.Value))
+            end)
+        end
+        
+        updateRep()
+        reputation:GetPropertyChangedSignal("Value"):Connect(updateRep)
+    end
 end)
 
 -- Right section paragraph
