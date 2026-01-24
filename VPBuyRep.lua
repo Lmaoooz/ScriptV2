@@ -93,31 +93,147 @@ local sections = {
     MiscSection = tabs.Buy:Section({ Side = "Right" }),
 }
 
--- Function to get all available items
-local function getAvailableItems()
-    local items = {}
-    local success, err = pcall(function()
-        local slotUI = game:GetService("ReplicatedStorage").Assets.UIs["Reputation Store"].BG.Iinv.Material.Template.Slot.UI
-        for _, child in pairs(slotUI:GetChildren()) do
-            table.insert(items, child.Name)
-        end
-    end)
-    
-    if not success then
-        Window:Notify({
-            Title = "Error",
-            Description = "Failed to get items: " .. tostring(err),
-            Lifetime = 5
-        })
-        return {"No items found"}
-    end
-    
-    return #items > 0 and items or {"No items found"}
-end
+-- Hardcoded list of all buyable items with prices
+local availableItems = {
+    "Ability Reroll - 100",
+    "Ability Storage - 350",
+    "Aizen Eyepatch - 7,500",
+    "American Flag - 100,000",
+    "Anibus Sword - 75,000",
+    "Angel Wing - 750",
+    "Ant King Head - 65,000",
+    "Ashen Ring - 1,500,000",
+    "Babylon's Fragment - 3,000",
+    "Babylon's Key - 7,000",
+    "Basaka Dagger - 2,200",
+    "Behelit - 100,000",
+    "Boss Ticket - 200",
+    "Brand of Sacrifice - 500,000",
+    "Casull - 15,000",
+    "Capsule - 5,000",
+    "Champion Necklace - 50,000",
+    "Chaos Ingot - 25,000",
+    "Cid's Sword - 3,500",
+    "Clover Leaf - 333",
+    "Curse King Fingers - 20,000",
+    "Curse Worm - 2,000",
+    "Dragon Ball - 500",
+    "Demon Core - 5,000",
+    "Demon Ring - 1,500,000",
+    "Dragonslayer - 75,000",
+    "Drilling Artifact - 1,000",
+    "Dungeon Medal - 1,000",
+    "Dungeon Ticket - 750",
+    "Elder Blood - 25,000",
+    "Enchant Limitbreak Stone - 10,000",
+    "Enhance Stone - 250",
+    "Eternal Wisp - 2,500",
+    "Explosive Artifact - 1,000",
+    "Falcon Feather - 100,000",
+    "Fire Essence - 25,000",
+    "Forbidden Magic - 50,000",
+    "Gae Bolg - 15,000",
+    "Gacha Coins - 500",
+    "Game Ball - 30,000",
+    "Germa Blood - 1,200,000",
+    "Golden Ball - 30,000",
+    "Golden Earrings - 50,000",
+    "Green Rage - 90,000",
+    "Haki Mastery Book - 200",
+    "Hogyoku Fragment - 5,000",
+    "Ice Artifact - 1,000",
+    "Infernal Core - 2,500",
+    "Intelligent Artifact - 1,000",
+    "Jackal - 15,000",
+    "John-Smith Mask - 5,000,000",
+    "Joker Card - 777",
+    "Kamish Necklace - 50,000",
+    "Kanshou - 25,000",
+    "Killua Soul - 2,500",
+    "King Card - 777",
+    "Knight Dagger - 1,500",
+    "Kokushibo's Sword - 7,500",
+    "Legendary Saiyan Rage Serum - 85,000",
+    "Legendary Shard - 25,000",
+    "Light Ore - 500",
+    "Light Shard - 200",
+    "Limitbreak Stone - 5,000",
+    "Los Lobos Core - 15,000",
+    "Lucky Wisp - 5,000",
+    "Mage Scarf - 1,000",
+    "Mage Wisp - 3,500",
+    "Magic Eye - 80,000",
+    "Magic Treasure Vault - 75,000",
+    "Matoi Staff - 120,000",
+    "Memory Shards - 75,000",
+    "Mimicry - 5,000",
+    "Motivated Chair - 35,000",
+    "Mysterious Arrow - 2,500",
+    "Okarun Glasses - 20,000",
+    "Phoenix Mantle - 75,000",
+    "President Gun - 20,000",
+    "Prestige Key - 75,000",
+    "Previous Boss Ticket - 350",
+    "Queen Card - 777",
+    "Race Reroll - 100",
+    "Race Storage - 350",
+    "Raid Boss Ticket - 500",
+    "Reason Eliminating Matter - 25,000",
+    "Recovery Artifact - 1,000",
+    "Remove Relic Potion - 350",
+    "Remove Wisp Potion - 350",
+    "Reroll Shard - 500",
+    "Resurreccion Energy - 500",
+    "Rinnegan Eyes - 7,000",
+    "Rowan Fragment - 1,000",
+    "Saiya Artifact - 1,000",
+    "Saiyan Blood - 50,000",
+    "Shadow Fragment - 700",
+    "Shadow Shard - 500",
+    "Sharingan Eyes - 7,000",
+    "Six Eyes - 3,000",
+    "Slime - 1,000",
+    "Slime Core - 5,000",
+    "Spell Scroll: Black Flame - 45,000",
+    "Spell Scroll: Black Hole - 30,000",
+    "Spell Scroll: Lightning - 15,000",
+    "Spell Scroll: Lightning Storm - 15,000",
+    "Spirit Hogyoku - 15,000",
+    "Split Soul Katana - 250",
+    "Sukuna Fingers - 350",
+    "Sword of Light Recipe - 5,000",
+    "Sword of Rupture - 75,000",
+    "Tempest Ore - 7,500",
+    "The True Sukuna Finger - 1,750",
+    "Third Eyes - 250,000",
+    "Trait Storage - 350",
+    "True Hogyoku - 3,500",
+    "True Six Eyes - 6,000",
+    "Truth Essence - 50,000",
+    "Turbo Artifact - 1,000",
+    "Turbo Granny Soul - 1,500",
+    "Ultimate Rune - 10,000",
+    "Undead Artifact - 1,000",
+    "Unusual Arrowhead - 35,000",
+    "Unusual Arrowstick - 35,000",
+    "Uryu Reiatsu - 10,000",
+    "Void Eyes - 17,500",
+    "Wado - 12,500",
+    "Warrior Wisp - 7,500",
+    "Wisp - 1,000",
+    "Yamato's Sword - 35,000",
+    "Zangetsu Soul - 500",
+    "Zenitsu's Sword - 5,000",
+    "Zeff Book - 1,200,000"
+}
 
--- Get items for dropdown
-local availableItems = getAvailableItems()
 local firstTimeBuying = true
+
+-- Helper function to extract item name from dropdown selection
+local function extractItemName(fullText)
+    -- Remove everything after " - " to get just the item name
+    return fullText:match("(.+)%s*-%s*%d")
+end
 
 sections.BuySection:Header({
     Name = "Buy with Dropdown method"
@@ -155,7 +271,7 @@ sections.BuySection:Divider()
 sections.BuySection:Button({
     Name = "Buy Items (Dropdown)",
     Callback = function()
-        local selectedItem = ItemDropdown.Value
+        local selectedItem = extractItemName(ItemDropdown.Value)
         
         if not selectedItem or selectedItem == "No items found" then
             Window:Notify({
