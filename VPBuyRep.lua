@@ -370,7 +370,6 @@ local function executeBuy()
                 })
             end
             
-            task.wait(0) -- Small delay between purchases
         end
         
         Window:Notify({
