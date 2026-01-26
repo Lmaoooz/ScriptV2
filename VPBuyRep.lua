@@ -120,6 +120,7 @@ local availableItems = {
     "Curse Worm - 2,000",
     "Dragon Ball - 500",
     "Demon Core - 5,000",
+    "Demon Meat - 100",
     "Demon Ring - 1,500,000",
     "Dragonslayer - 75,000",
     "Drilling Artifact - 1,000",
