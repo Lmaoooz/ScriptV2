@@ -277,13 +277,13 @@ sections.BuySection:Divider()
 sections.BuySection:Button({
     Name = "Buy Items (Dropdown)",
     Callback = function()
-        local selectedItems = ItemDropdown.Value
+        local selectedItems = ItemDropdown.Value or {}
         
         -- Check if any items are selected
         local itemCount = 0
         local itemsList = {}
         for itemName, isSelected in pairs(selectedItems) do
-            if isSelected then
+            if isSelected == true then
                 itemCount = itemCount + 1
                 table.insert(itemsList, extractItemName(itemName))
             end
@@ -291,12 +291,12 @@ sections.BuySection:Button({
         
         if itemCount == 0 then
             Window:Notify({
-                Title = "Error",
+                Title = "Error", 
                 Description = "Please select at least one item!",
                 Lifetime = 5
             })
             return
-        end
+            end
         
         -- Function to execute buy logic
         local function executeBuy()
