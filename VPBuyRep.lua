@@ -369,7 +369,7 @@ local function executeBuy()
                 })
             end
             
-            task.wait(0.1) -- Small delay between purchases
+            task.wait(0) -- Small delay between purchases
         end
         
         Window:Notify({
@@ -592,7 +592,7 @@ local function executeManualBuy()
                 end
             end
             
-            task.wait(0.1) -- Small delay between purchases
+            task.wait(0) -- Small delay between purchases
         end
         
         if successfulPurchases > 0 then
