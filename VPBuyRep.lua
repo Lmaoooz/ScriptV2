@@ -299,34 +299,22 @@ sections.BuySection:Divider()
 sections.BuySection:Button({
     Name = "Buy Items (Dropdown)",
     Callback = function()
-        -- Read directly from dropdown instead of stored variable
         local selectedItems = ItemDropdown.Value
-        
-        print("Debug - Type:", type(selectedItems))
-        print("Debug - Raw value:", selectedItems)
         
         -- Check if any items are selected
         local itemCount = 0
         local itemsList = {}
         
         if type(selectedItems) == "table" then
-            for index, state in pairs(selectedItems) do
-                print("Debug - Index:", index, "State:", state, "Type:", type(index))
-                if state == true then  -- Explicit check for true
-                    local fullItemName = availableItems[tonumber(index)]
-                    print("Debug - Full item name:", fullItemName)
-                    if fullItemName then
-                        itemCount = itemCount + 1
-                        local itemName = extractItemName(fullItemName)
-                        print("Debug - Extracted name:", itemName)
-                        table.insert(itemsList, itemName)
-                    end
+            for index, fullItemName in pairs(selectedItems) do
+                -- The value IS the item name, not true/false!
+                if fullItemName and fullItemName ~= "" then
+                    itemCount = itemCount + 1
+                    local itemName = extractItemName(fullItemName)
+                    table.insert(itemsList, itemName)
                 end
             end
         end
-        
-        print("Debug - Item count:", itemCount)
-        print("Debug - Items list:", itemsList)
         
         if itemCount == 0 then
             Window:Notify({
@@ -465,7 +453,7 @@ sections.BuySection:Button({
                 }
             })
         else
-            executeBuy()
+           executeBuy()
         end
     end,
 })
