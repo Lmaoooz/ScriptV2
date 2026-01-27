@@ -245,16 +245,21 @@ sections.BuySection:Header({
     Name = "Buy with Dropdown method"
 })
 
--- Dropdown for selecting items
 local ItemDropdown = sections.BuySection:Dropdown({
     Name = "Select Items",
     Search = true,
-    Multi = false,
-    Required = true,
+    Multi = true,
+    Required = false,
     Options = availableItems,
-    Default = 1,
+    Default = {},  -- Empty table means nothing selected by default
     Callback = function(Value)
-        print("Selected item: " .. Value)
+        local Values = {}
+        for itemName, state in pairs(Value) do
+            if state then
+                table.insert(Values, itemName)
+            end
+        end
+        print("Selected items:", table.concat(Values, ", "))
     end,
 }, "ItemDropdown")
 
@@ -277,121 +282,131 @@ sections.BuySection:Divider()
 sections.BuySection:Button({
     Name = "Buy Items (Dropdown)",
     Callback = function()
-        local selectedItem = extractItemName(ItemDropdown.Value)
+        local selectedItems = ItemDropdown.Value
         
-        if not selectedItem or selectedItem == "No items found" then
+        -- Check if any items are selected
+        local itemCount = 0
+        local itemsList = {}
+        
+        -- Multi dropdown returns a table where keys are item names and values are true/false
+        for itemName, state in pairs(selectedItems) do
+            if state then  -- If the item is selected (true)
+                itemCount = itemCount + 1
+                table.insert(itemsList, extractItemName(itemName))
+            end
+        end
+        
+        if itemCount == 0 then
             Window:Notify({
                 Title = "Error",
-                Description = "Please select a valid item first!",
+                Description = "Please select at least one item!",
                 Lifetime = 5
             })
             return
         end
         
         -- Function to execute buy logic
-local function executeBuy()
-    local amount = tonumber(dropdownAmountValue)
-    
-    if not amount or amount <= 0 then
-        Window:Notify({
-            Title = "Error",
-            Description = "Please enter a valid amount (number greater than 0)!",
-            Lifetime = 5
-        })
-        return
-    end
-    
-    local success, err = pcall(function()
-        local player = game:GetService("Players").LocalPlayer
-        local repStoreGui = player.PlayerGui:FindFirstChild("Reputation Store")
-        
-        -- Set proximity prompt hold duration to 0
-        local proximityPrompt = workspace.Npc.Misc["Reputation Store"].ProximityPrompt
-        local originalHoldDuration = proximityPrompt.HoldDuration
-        proximityPrompt.HoldDuration = 0
-        
-        -- Check if Reputation Store GUI already exists
-        if not repStoreGui then
-            -- Teleport to the position
-            player.Character:PivotTo(CFrame.new(Vector3.new(-913.936157, 135.355194, 317.129181)))
-            task.wait(0.3)
+        local function executeBuy()
+            local amount = tonumber(dropdownAmountValue)
             
-            -- Keep pressing E until GUI appears
-            local VIM = game:GetService("VirtualInputManager")
-            local maxAttempts = 20
-            local attempts = 0
-            
-            while attempts < maxAttempts do
-                repStoreGui = player.PlayerGui:FindFirstChild("Reputation Store")
-                if repStoreGui then
-                    break
-                end
-                
-                -- Press E key
-                VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-                task.wait(0.05)
-                VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-                task.wait(0.2)
-                
-                attempts = attempts + 1
-            end
-            
-            if not repStoreGui then
-                proximityPrompt.HoldDuration = originalHoldDuration
+            if not amount or amount <= 0 then
                 Window:Notify({
                     Title = "Error",
-                    Description = "Failed to open Reputation Store!",
+                    Description = "Please enter a valid amount (number greater than 0)!",
                     Lifetime = 5
                 })
                 return
             end
-        end
-        
-        -- Show the GUI
-        repStoreGui.Enabled = true
-        task.wait(0.3)
-        
-        -- Buy the item multiple times based on amount
-        for i = 1, amount do
-            local args = {
-                [1] = "Buy",
-                [2] = selectedItem
-            }
             
-            local buySuccess, buyErr = pcall(function()
-                repStoreGui.BG.Iinv.Function:InvokeServer(unpack(args))
+            local success, err = pcall(function()
+                local player = game:GetService("Players").LocalPlayer
+                local repStoreGui = player.PlayerGui:FindFirstChild("Reputation Store")
+                
+                -- Set proximity prompt hold duration to 0
+                local proximityPrompt = workspace.Npc.Misc["Reputation Store"].ProximityPrompt
+                local originalHoldDuration = proximityPrompt.HoldDuration
+                proximityPrompt.HoldDuration = 0
+                
+                -- Check if Reputation Store GUI already exists
+                if not repStoreGui then
+                    -- Teleport to the position
+                    player.Character:PivotTo(CFrame.new(Vector3.new(-913.936157, 135.355194, 317.129181)))
+                    task.wait(0.3)
+                    
+                    -- Keep pressing E until GUI appears
+                    local VIM = game:GetService("VirtualInputManager")
+                    local maxAttempts = 20
+                    local attempts = 0
+                    
+                    while attempts < maxAttempts do
+                        repStoreGui = player.PlayerGui:FindFirstChild("Reputation Store")
+                        if repStoreGui then
+                            break
+                        end
+                        
+                        -- Press E key
+                        VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                        task.wait(0.05)
+                        VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+                        task.wait(0.2)
+                        
+                        attempts = attempts + 1
+                    end
+                    
+                    if not repStoreGui then
+                        proximityPrompt.HoldDuration = originalHoldDuration
+                        Window:Notify({
+                            Title = "Error",
+                            Description = "Failed to open Reputation Store!",
+                            Lifetime = 5
+                        })
+                        return
+                    end
+                end
+                
+                -- Show the GUI
+                repStoreGui.Enabled = true
+                task.wait(0.3)
+                
+                -- Buy each selected item multiple times based on amount
+                local totalPurchases = 0
+                for _, selectedItem in ipairs(itemsList) do
+                    for i = 1, amount do
+                        local args = {
+                            [1] = "Buy",
+                            [2] = selectedItem
+                        }
+                        
+                        local buySuccess, buyErr = pcall(function()
+                            repStoreGui.BG.Iinv.Function:InvokeServer(unpack(args))
+                        end)
+                        
+                        if buySuccess then
+                            totalPurchases = totalPurchases + 1
+                        end
+                    end
+                end
+                
+                Window:Notify({
+                    Title = "Success",
+                    Description = "Purchased " .. totalPurchases .. " items total (" .. itemCount .. " different items x" .. amount .. ")",
+                    Lifetime = 5
+                })
+                
+                -- Close the GUI and restore proximity prompt
+                task.wait(0.2)
+                repStoreGui.Enabled = false
+                proximityPrompt.HoldDuration = originalHoldDuration
             end)
             
-            if not buySuccess then
+            if not success then
                 Window:Notify({
-                    Title = "Purchase Failed",
-                    Description = "Error on item " .. i .. ": " .. tostring(buyErr),
+                    Title = "Error",
+                    Description = "Failed to buy: " .. tostring(err),
                     Lifetime = 5
                 })
             end
-            
         end
-        
-        Window:Notify({
-            Title = "Success",
-            Description = "Purchased " .. amount .. "x " .. selectedItem,
-            Lifetime = 5
-        })
-        
-        -- Close the GUI and restore proximity prompt
-        task.wait(0.2)
-        repStoreGui.Enabled = false
-        proximityPrompt.HoldDuration = originalHoldDuration
-    end)
-    
-    if not success then
-        Window:Notify({
-            Title = "Error",
-            Description = "Failed to buy: " .. tostring(err),
-            Lifetime = 5
-        })
-    end
-            end
         
         -- Show dialog on first time
         if firstTimeBuying then
