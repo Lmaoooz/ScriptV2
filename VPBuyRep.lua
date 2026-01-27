@@ -234,6 +234,9 @@ local firstTimeBuying = true
 
 -- Helper function to extract item name from dropdown selection
 local function extractItemName(fullText)
+    -- Convert to string if it's not already
+    fullText = tostring(fullText)
+    
     local dashPos = fullText:find(" %- ")
     if dashPos then
         return fullText:sub(1, dashPos - 1)
@@ -284,17 +287,25 @@ sections.BuySection:Button({
     Callback = function()
         local selectedItems = ItemDropdown.Value
         
+        print("Type of selectedItems:", type(selectedItems))
+        print("selectedItems:", selectedItems)
+        
         -- Check if any items are selected
         local itemCount = 0
         local itemsList = {}
         
         -- Multi dropdown returns a table where keys are item names and values are true/false
-        for itemName, state in pairs(selectedItems) do
-            if state then  -- If the item is selected (true)
-                itemCount = itemCount + 1
-                table.insert(itemsList, extractItemName(itemName))
+        if type(selectedItems) == "table" then
+            for itemName, state in pairs(selectedItems) do
+                print("Key:", itemName, "Type:", type(itemName), "State:", state)
+                if state then
+                    itemCount = itemCount + 1
+                    local extracted = extractItemName(itemName)
+                    print("Extracted:", extracted)
+                    table.insert(itemsList, extracted)
+                end
             end
-        end
+            end
         
         if itemCount == 0 then
             Window:Notify({
