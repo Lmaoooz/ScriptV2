@@ -287,25 +287,24 @@ sections.BuySection:Button({
     Callback = function()
         local selectedItems = ItemDropdown.Value
         
-        print("Type of selectedItems:", type(selectedItems))
-        print("selectedItems:", selectedItems)
-        
         -- Check if any items are selected
         local itemCount = 0
         local itemsList = {}
         
-        -- Multi dropdown returns a table where keys are item names and values are true/false
+        -- Multi dropdown returns indices as keys
         if type(selectedItems) == "table" then
-            for itemName, state in pairs(selectedItems) do
-                print("Key:", itemName, "Type:", type(itemName), "State:", state)
+            for index, state in pairs(selectedItems) do
                 if state then
-                    itemCount = itemCount + 1
-                    local extracted = extractItemName(itemName)
-                    print("Extracted:", extracted)
-                    table.insert(itemsList, extracted)
+                    -- Get the actual item name from availableItems using the index
+                    local fullItemName = availableItems[tonumber(index)]
+                    if fullItemName then
+                        itemCount = itemCount + 1
+                        local itemName = extractItemName(fullItemName)
+                        table.insert(itemsList, itemName)
+                    end
                 end
             end
-            end
+        end
         
         if itemCount == 0 then
             Window:Notify({
