@@ -248,18 +248,32 @@ sections.BuySection:Header({
     Name = "Buy with Dropdown method"
 })
 
+local selectedDropdownItems = {}
+
+-- Dropdown for selecting items
 local ItemDropdown = sections.BuySection:Dropdown({
     Name = "Select Items",
     Search = true,
     Multi = true,
     Required = false,
     Options = availableItems,
-    Default = {},  -- Empty table means nothing selected by default
+    Default = {},
     Callback = function(Value)
-        local Values = {}
-        for itemName, state in pairs(Value) do
+        -- Update the stored selection whenever dropdown changes
+        selectedDropdownItems = {}
+        for index, state in pairs(Value) do
             if state then
-                table.insert(Values, itemName)
+                selectedDropdownItems[index] = true
+            end
+        end
+        
+        local Values = {}
+        for index, state in pairs(Value) do
+            if state then
+                local fullItemName = availableItems[tonumber(index)]
+                if fullItemName then
+                    table.insert(Values, extractItemName(fullItemName))
+                end
             end
         end
         print("Selected items:", table.concat(Values, ", "))
@@ -285,17 +299,16 @@ sections.BuySection:Divider()
 sections.BuySection:Button({
     Name = "Buy Items (Dropdown)",
     Callback = function()
-        local selectedItems = ItemDropdown.Value
+        -- Use the stored selection instead of ItemDropdown.Value
+        local selectedItems = selectedDropdownItems
         
         -- Check if any items are selected
         local itemCount = 0
         local itemsList = {}
         
-        -- Multi dropdown returns indices as keys
         if type(selectedItems) == "table" then
             for index, state in pairs(selectedItems) do
                 if state then
-                    -- Get the actual item name from availableItems using the index
                     local fullItemName = availableItems[tonumber(index)]
                     if fullItemName then
                         itemCount = itemCount + 1
@@ -313,7 +326,7 @@ sections.BuySection:Button({
                 Lifetime = 5
             })
             return
-        end
+            end
         
         -- Function to execute buy logic
         local function executeBuy()
