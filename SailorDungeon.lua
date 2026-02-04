@@ -260,36 +260,23 @@ do
     })
 
     MainToggle:OnChanged(function()
-        -- Check if current place ID is the restricted one
-        if currentPlaceId == 77747658251236 then
-            -- Do nothing in this place
-            AutoFarmEnabled = false
-            Options.AutoFarmToggle:SetValue(false)
-            Fluent:Notify({
-                Title = "Auto Farm",
-                Content = "Auto Farm is disabled in this place!",
-                Duration = 3
-            })
-            return
-        end
-        
-        -- Normal functionality for other places
-        AutoFarmEnabled = Options.AutoFarmToggle.Value
-        if AutoFarmEnabled then
-            Fluent:Notify({
-                Title = "Auto Farm",
-                Content = "Auto Farm & Teleport Enabled!",
-                Duration = 3
-            })
-        else
-            Fluent:Notify({
-                Title = "Auto Farm",
-                Content = "Auto Farm & Teleport Disabled!",
-                Duration = 3
-            })
-            currentTarget = nil
-        end
-    end)
+    AutoFarmEnabled = Options.AutoFarmToggle.Value
+
+    if AutoFarmEnabled then
+        Fluent:Notify({
+            Title = "Auto Farm",
+            Content = "Auto Farm & Teleport Enabled!",
+            Duration = 3
+        })
+    else
+        Fluent:Notify({
+            Title = "Auto Farm",
+            Content = "Auto Farm & Teleport Disabled!",
+            Duration = 3
+        })
+        currentTarget = nil
+    end
+end)
 
     -- Teleport Distance Slider
     local TeleportDistSlider = Tabs.Main:AddSlider("TeleportDistance", {
@@ -562,7 +549,6 @@ end
 -- Main Auto Farm Loop
 RunService.Heartbeat:Connect(function()
     if not AutoFarmEnabled then return end
-    if currentPlaceId == 77747658251236 then return end -- Extra check
     
     if not Character or not Character.Parent then
         Character = LocalPlayer.Character
