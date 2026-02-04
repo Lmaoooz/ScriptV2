@@ -10,8 +10,8 @@ local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/d
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "Auto Farm Script",
-    SubTitle = "Enemy Killer",
+    Title = "[Sailor Piece] - Auto Dungeon script |",
+    SubTitle = "By WnZ",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Acrylic = true,
@@ -21,7 +21,7 @@ local Window = Fluent:CreateWindow({
 
 local Tabs = {
     Main = Window:AddTab({ Title = "Auto Farm", Icon = "sword" }),
-    Dungeon = Window:AddTab({ Title = "Dungeon", Icon = "door-open" }),
+    Dungeon = Window:AddTab({ Title = "Dungeon", Icon = "layers" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
@@ -255,7 +255,7 @@ do
 
     -- Main Auto Farm Toggle
     local MainToggle = Tabs.Main:AddToggle("AutoFarmToggle", {
-        Title = "Enable Auto Farm & Teleport",
+        Title = "Enable Auto Farm",
         Default = false
     })
 
@@ -282,7 +282,7 @@ end)
     local TeleportDistSlider = Tabs.Main:AddSlider("TeleportDistance", {
         Title = "Attack Distance",
         Description = "Distance behind enemy to attack from",
-        Default = 3,
+        Default = 7,
         Min = 1,
         Max = 10,
         Rounding = 0,
@@ -358,7 +358,7 @@ end)
 
     -- Select Ability Multi Dropdown
     local AbilityDropdown = Tabs.Main:AddDropdown("AbilityDropdown", {
-        Title = "Select Ability Keys",
+        Title = "Select Ability List",
         Description = "Choose which ability keys to press automatically.",
         Values = {"Z", "X", "C", "V"},
         Multi = true,
@@ -374,7 +374,7 @@ end)
 
     -- Auto Ability Toggle
     local AutoAbilityToggle = Tabs.Main:AddToggle("AutoAbilityToggle", {
-        Title = "Auto Ability",
+        Title = "Auto Use Ability",
         Description = "Continuously press selected ability keys",
         Default = false
     })
@@ -403,7 +403,7 @@ end)
 
     -- Auto Haki Toggle
     local AutoHakiToggle = Tabs.Main:AddToggle("AutoHakiToggle", {
-        Title = "Auto Haki",
+        Title = "Auto Haki [Buso]",
         Default = false
     })
 
@@ -412,13 +412,13 @@ end)
         if AutoHakiEnabled then
             fireHakiRemote()
             Fluent:Notify({
-                Title = "Auto Haki",
+                Title = "Auto Haki [Buso]",
                 Content = "Auto Haki Enabled!",
                 Duration = 3
             })
         else
             Fluent:Notify({
-                Title = "Auto Haki",
+                Title = "Auto Haki [Buso]",
                 Content = "Auto Haki Disabled!",
                 Duration = 3
             })
@@ -538,13 +538,6 @@ end)
             })
         end
     end)
-
-    -- Stats Display
-    Tabs.Main:AddParagraph({
-        Title = "Status",
-        Content = "Waiting for target..."
-    })
-end
 
 -- Main Auto Farm Loop
 RunService.Heartbeat:Connect(function()
