@@ -305,7 +305,7 @@ do
     -- Attack Distance Input
     local AttackDistanceInput = Tabs.Main:AddInput("AttackDistanceInput", {
         Title = "Farm Distance",
-        Description = "Distance to attack the mobs. 10 Is Recommended.",
+        Description = "10 Is Recommended.",
         Default = "10",
         Placeholder = "Enter distance",
         Numeric = true,
