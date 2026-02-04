@@ -274,7 +274,7 @@ do
 
     Tabs.Main:AddParagraph({
         Title = "Auto Farm",
-        Content = "Automatically targets, teleports to, and kills enemies with Humanoid health.\nToggle below to start farming!"
+        Content = "Automatically clears dungeon."
     })
 
     -- Main Auto Farm Toggle
