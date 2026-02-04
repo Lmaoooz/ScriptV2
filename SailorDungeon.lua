@@ -616,6 +616,7 @@ task.spawn(function()
         end
     end
 end)
+end
 
 -- Auto Equip Weapon Loop
 RunService.Heartbeat:Connect(function()
