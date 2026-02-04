@@ -75,15 +75,15 @@ local abilityKeys = {
 
 -- Config
 local CONFIG = {
-    AttackRange = 99999,
     AttackDelay = 0,
     TargetRefreshRate = 0.5,
-    TeleportDistance = 3,
+    AttackDistance = 3,
 }
 
 -- Functions
 local function isValidEnemy(entity)
     if not entity then return false end
+    if not entity.Parent then return false end
     
     local humanoid = entity:FindFirstChildOfClass("Humanoid")
     if not humanoid then return false end
@@ -97,9 +97,13 @@ end
 
 local function findNearestEnemy()
     local nearestEnemy = nil
-    local shortestDistance = CONFIG.AttackRange
+    local shortestDistance = math.huge
     
-    for _, entity in pairs(workspace:GetDescendants()) do
+    -- Get enemies from workspace.NPCs folder
+    local NPCsFolder = workspace:FindFirstChild("NPCs")
+    if not NPCsFolder then return nil end
+    
+    for _, entity in pairs(NPCsFolder:GetChildren()) do
         if entity:IsA("Model") and isValidEnemy(entity) then
             local enemyRoot = entity:FindFirstChild("HumanoidRootPart")
             if enemyRoot then
@@ -123,24 +127,44 @@ local function attackTarget()
     end
     
     local enemyRoot = currentTarget:FindFirstChild("HumanoidRootPart")
-    if not enemyRoot then return false end
+    if not enemyRoot then 
+        currentTarget = nil
+        return false 
+    end
     
-    local distance = (HumanoidRootPart.Position - enemyRoot.Position).Magnitude
-    
-    if distance > CONFIG.AttackRange then
+    -- Safety check: make sure enemy still exists and is valid
+    if not enemyRoot.Parent then
+        currentTarget = nil
         return false
     end
     
-    -- Calculate position behind enemy
+    local targetPosition = enemyRoot.Position
+    
+    -- Position behind enemy
     local enemyLookVector = enemyRoot.CFrame.LookVector
-    local behindPosition = enemyRoot.Position - (enemyLookVector * CONFIG.TeleportDistance)
-    local lookAtEnemy = CFrame.new(behindPosition, enemyRoot.Position)
-    HumanoidRootPart.CFrame = lookAtEnemy
+    local behindPosition = targetPosition - (enemyLookVector * CONFIG.AttackDistance)
+    
+    -- Create CFrame facing the enemy
+    local lookAtCFrame = CFrame.new(behindPosition, targetPosition)
+    
+    -- Smoothly set position
+    pcall(function()
+        HumanoidRootPart.CFrame = lookAtCFrame
+    end)
     
     task.wait(0.05)
     
+    -- Double check enemy is still valid before attacking
+    if not isValidEnemy(currentTarget) then
+        currentTarget = nil
+        return false
+    end
+    
     -- Attack
-    AttackRemote:FireServer()
+    pcall(function()
+        AttackRemote:FireServer()
+    end)
+    
     return true
 end
 
@@ -260,34 +284,41 @@ do
     })
 
     MainToggle:OnChanged(function()
-    AutoFarmEnabled = Options.AutoFarmToggle.Value
+        AutoFarmEnabled = Options.AutoFarmToggle.Value
 
-    if AutoFarmEnabled then
-        Fluent:Notify({
-            Title = "Auto Farm",
-            Content = "Auto Farm & Teleport Enabled!",
-            Duration = 3
-        })
-    else
-        Fluent:Notify({
-            Title = "Auto Farm",
-            Content = "Auto Farm & Teleport Disabled!",
-            Duration = 3
-        })
-        currentTarget = nil
-    end
-end)
+        if AutoFarmEnabled then
+            Fluent:Notify({
+                Title = "Auto Farm",
+                Content = "Auto Farm & Teleport Enabled!",
+                Duration = 3
+            })
+        else
+            Fluent:Notify({
+                Title = "Auto Farm",
+                Content = "Auto Farm & Teleport Disabled!",
+                Duration = 3
+            })
+            currentTarget = nil
+        end
+    end)
 
-    -- Teleport Distance Slider
-    local TeleportDistSlider = Tabs.Main:AddSlider("TeleportDistance", {
+    -- Attack Distance Input
+    local AttackDistanceInput = Tabs.Main:AddInput("AttackDistanceInput", {
         Title = "Attack Distance",
-        Description = "Distance behind enemy to attack from",
-        Default = 7,
-        Min = 1,
-        Max = 10,
-        Rounding = 0,
+        Default = "3",
+        Placeholder = "Enter distance",
+        Numeric = true,
+        Finished = false,
         Callback = function(Value)
-            CONFIG.TeleportDistance = Value
+            local distance = tonumber(Value)
+            if distance and distance > 0 then
+                CONFIG.AttackDistance = distance
+                Fluent:Notify({
+                    Title = "Attack Distance",
+                    Content = "Distance set to: " .. distance,
+                    Duration = 2
+                })
+            end
         end
     })
 
@@ -358,7 +389,7 @@ end)
 
     -- Select Ability Multi Dropdown
     local AbilityDropdown = Tabs.Main:AddDropdown("AbilityDropdown", {
-        Title = "Select Ability List",
+        Title = "Select Ability Keys",
         Description = "Choose which ability keys to press automatically.",
         Values = {"Z", "X", "C", "V"},
         Multi = true,
@@ -374,7 +405,7 @@ end)
 
     -- Auto Ability Toggle
     local AutoAbilityToggle = Tabs.Main:AddToggle("AutoAbilityToggle", {
-        Title = "Auto Use Ability",
+        Title = "Auto Ability",
         Description = "Continuously press selected ability keys",
         Default = false
     })
@@ -538,10 +569,14 @@ end)
             })
         end
     end)
+end
 
 -- Main Auto Farm Loop
 RunService.Heartbeat:Connect(function()
     if not AutoFarmEnabled then return end
+    
+    -- Check if place ID is restricted
+    if currentPlaceId == 77747658251236 then return end
     
     if not Character or not Character.Parent then
         Character = LocalPlayer.Character
@@ -616,7 +651,6 @@ task.spawn(function()
         end
     end
 end)
-end
 
 -- Auto Equip Weapon Loop
 RunService.Heartbeat:Connect(function()
