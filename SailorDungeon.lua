@@ -280,6 +280,7 @@ do
     -- Main Auto Farm Toggle
     local MainToggle = Tabs.Main:AddToggle("AutoFarmToggle", {
         Title = "Enable Auto Farm",
+        Description = "Enable to start auto kill enemies.",
         Default = false
     })
 
