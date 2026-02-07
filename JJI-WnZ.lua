@@ -30,7 +30,6 @@ local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TeleportService = game:GetService("TeleportService")
 
-local DETECTION_RANGE = 999999999
 local CHECK_INTERVAL = 0
 local KILL_DELAY = 0.1
 local EMPTY_CHECK_TIME = 3
@@ -64,16 +63,11 @@ local function checkAndKillNearbyMobs()
 	
 	for _, mob in pairs(mobsFolder:GetChildren()) do
 		if mob:IsA("Model") then
-			local mobRoot = mob:FindFirstChild("HumanoidRootPart") or mob:FindFirstChild("Torso")
 			local humanoid = mob:FindFirstChildOfClass("Humanoid")
 			
-			if mobRoot and humanoid and humanoid.Health > 0 then
-				local distance = (humanoidRootPart.Position - mobRoot.Position).Magnitude
-				
-				if distance <= DETECTION_RANGE then
-					humanoid.Health = 0
-					task.wait(KILL_DELAY)
-				end
+			if humanoid and humanoid.Health > 0 then
+				humanoid.Health = 0
+				task.wait(KILL_DELAY)
 			end
 		end
 	end
@@ -149,7 +143,9 @@ local function teleportToMobs()
 	for _, mob in pairs(mobsFolder:GetChildren()) do
 		if mob:IsA("Model") then
 			local mobRoot = mob:FindFirstChild("HumanoidRootPart") or mob:FindFirstChild("Torso")
-			if mobRoot then
+			local humanoid = mob:FindFirstChildOfClass("Humanoid")
+			
+			if mobRoot and humanoid and humanoid.Health > 0 then
 				humanoidRootPart.CFrame = mobRoot.CFrame
 				return true
 			end
@@ -170,7 +166,10 @@ end
 local function hasModelInMobs()
 	for _, mob in pairs(mobsFolder:GetChildren()) do
 		if mob:IsA("Model") then
-			return true
+			local humanoid = mob:FindFirstChildOfClass("Humanoid")
+			if humanoid and humanoid.Health > 0 then
+				return true
+			end
 		end
 	end
 	return false
@@ -216,7 +215,9 @@ local function autoFarmLoop()
 			if not existingStartTime then
 				existingStartTime = tick()
 			elseif tick() - existingStartTime >= EXISTING_CHECK_TIME then
-				teleportToMobs()
+				if hasModelInMobs() then
+					teleportToMobs()
+				end
 				existingStartTime = tick()
 			end
 		end
