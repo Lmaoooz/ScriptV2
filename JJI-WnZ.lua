@@ -50,9 +50,9 @@ local autoFarmEnabled = false
 local autoJoinLobbyEnabled = false
 local autoJoinEnabled = false
 local rejoinOnKickEnabled = false
-local selectedStage = "Tokyo Subway"
-local selectedLevel = 2
-local selectedDifficulty = "Nightmare"
+local selectedStage = "Cursed School"
+local selectedLevel = 1
+local selectedDifficulty = "Easy"
 
 player.CharacterAdded:Connect(function(newCharacter)
 	character = newCharacter
