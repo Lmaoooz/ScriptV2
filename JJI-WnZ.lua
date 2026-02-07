@@ -374,7 +374,7 @@ do
 		Title = "Select Stage",
 		Values = {"Cursed School", "Yasohachi Bridge", "Tokyo Subway", "Eerie Farm", "Detention Center"},
 		Multi = false,
-		Default = 3,
+		Default = nil,
 	})
 	
 	StageDropdown:OnChanged(function(Value)
@@ -385,7 +385,7 @@ do
 		Title = "Select Level",
 		Values = {"1", "2", "3", "4"},
 		Multi = false,
-		Default = 2,
+		Default = nil,
 	})
 	
 	LevelDropdown:OnChanged(function(Value)
@@ -396,7 +396,7 @@ do
 		Title = "Select Difficulty",
 		Values = {"Easy", "Medium", "Hard", "Nightmare"},
 		Multi = false,
-		Default = 4,
+		Default = nil,
 	})
 	
 	DifficultyDropdown:OnChanged(function(Value)
