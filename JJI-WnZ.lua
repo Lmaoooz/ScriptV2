@@ -30,10 +30,10 @@ local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TeleportService = game:GetService("TeleportService")
 
+local DETECTION_RANGE = 999999999
 local CHECK_INTERVAL = 0
 local KILL_DELAY = 0.1
 local EMPTY_CHECK_TIME = 3
-local EXISTING_CHECK_TIME = 3
 local LOBBY_PLACE_ID = 10450270085
 
 local mobsFolder = workspace:WaitForChild("Objects"):WaitForChild("Mobs")
@@ -52,6 +52,7 @@ local rejoinOnKickEnabled = false
 local selectedStage = "Cursed School"
 local selectedLevel = 1
 local selectedDifficulty = "Easy"
+local currentTargetMob = nil
 
 player.CharacterAdded:Connect(function(newCharacter)
 	character = newCharacter
@@ -63,11 +64,16 @@ local function checkAndKillNearbyMobs()
 	
 	for _, mob in pairs(mobsFolder:GetChildren()) do
 		if mob:IsA("Model") then
+			local mobRoot = mob:FindFirstChild("HumanoidRootPart") or mob:FindFirstChild("Torso")
 			local humanoid = mob:FindFirstChildOfClass("Humanoid")
 			
-			if humanoid and humanoid.Health > 0 then
-				humanoid.Health = 0
-				task.wait(KILL_DELAY)
+			if mobRoot and humanoid and humanoid.Health > 0 then
+				local distance = (humanoidRootPart.Position - mobRoot.Position).Magnitude
+				
+				if distance <= DETECTION_RANGE then
+					humanoid.Health = 0
+					task.wait(KILL_DELAY)
+				end
 			end
 		end
 	end
@@ -137,8 +143,8 @@ local function clickUIButtons()
 	end
 end
 
-local function teleportToMobs()
-	if not humanoidRootPart or not humanoidRootPart.Parent then return end
+local function teleportToAliveMob()
+	if not humanoidRootPart or not humanoidRootPart.Parent then return nil end
 	
 	for _, mob in pairs(mobsFolder:GetChildren()) do
 		if mob:IsA("Model") then
@@ -147,10 +153,23 @@ local function teleportToMobs()
 			
 			if mobRoot and humanoid and humanoid.Health > 0 then
 				humanoidRootPart.CFrame = mobRoot.CFrame
-				return true
+				return mob
 			end
 		end
 	end
+	return nil
+end
+
+local function checkCurrentTargetAlive()
+	if not currentTargetMob or not currentTargetMob.Parent then
+		return false
+	end
+	
+	local humanoid = currentTargetMob:FindFirstChildOfClass("Humanoid")
+	if humanoid and humanoid.Health > 0 then
+		return true
+	end
+	
 	return false
 end
 
@@ -163,7 +182,7 @@ local function isMobsFolderEmpty()
 	return true
 end
 
-local function hasModelInMobs()
+local function hasAliveMobs()
 	for _, mob in pairs(mobsFolder:GetChildren()) do
 		if mob:IsA("Model") then
 			local humanoid = mob:FindFirstChildOfClass("Humanoid")
@@ -180,11 +199,10 @@ local function autoFarmLoop()
 		return
 	end
 	
-	teleportToMobs()
+	currentTargetMob = teleportToAliveMob()
 	
 	local lastTeleportTime = 0
 	local wasEmpty = false
-	local existingStartTime = nil
 	
 	while autoFarmEnabled do
 		if game.PlaceId == LOBBY_PLACE_ID then
@@ -197,29 +215,24 @@ local function autoFarmLoop()
 		pressEIfDropsExist()
 		clickUIButtons()
 		
+		if not checkCurrentTargetAlive() and hasAliveMobs() then
+			currentTargetMob = teleportToAliveMob()
+		end
+		
 		local isEmpty = isMobsFolderEmpty()
 		
 		if isEmpty and not wasEmpty then
 			lastTeleportTime = tick()
 			wasEmpty = true
-			existingStartTime = nil
+			currentTargetMob = nil
 		elseif not isEmpty then
 			if wasEmpty and tick() - lastTeleportTime >= EMPTY_CHECK_TIME then
-				if hasModelInMobs() then
-					teleportToMobs()
+				if hasAliveMobs() then
+					currentTargetMob = teleportToAliveMob()
 				end
 				lastTeleportTime = tick()
 			end
 			wasEmpty = false
-			
-			if not existingStartTime then
-				existingStartTime = tick()
-			elseif tick() - existingStartTime >= EXISTING_CHECK_TIME then
-				if hasModelInMobs() then
-					teleportToMobs()
-				end
-				existingStartTime = tick()
-			end
 		end
 		
 		task.wait(CHECK_INTERVAL)
