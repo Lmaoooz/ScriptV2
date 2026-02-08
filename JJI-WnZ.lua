@@ -476,45 +476,49 @@ SaveManager:LoadAutoloadConfig()
 
 local HttpService = game:GetService("HttpService")
 local lastLootState = false
-local totalLootCount = 0 -- This tracks how many times you've gotten loot
+local totalLootCount = 0 
 
 task.spawn(function()
     while true do
         task.wait(1)
-			
         if not WebhookEnabled or WebhookURL == "" then continue end
 
         local lootGui = player.PlayerGui:FindFirstChild("Loot")
         if lootGui then
             local isEnabled = lootGui.Enabled
             
-            -- Trigger only when the GUI state changes to Enabled (becomes true)
             if isEnabled and not lastLootState then
-                totalLootCount = totalLootCount + 1 -- Add 1 to the counter
-                task.wait(0.5) -- Wait for items to load in the frame
+                totalLootCount = totalLootCount + 1 
+                task.wait(0.5) 
 
                 local scrollingFrame = lootGui.Results.Main.ScrollingFrame
-                local itemsList = "```\n" -- Starts the code block
+                local itemsList = "```\n" 
                 
-                -- Loop through all items
                 for _, itemFrame in pairs(scrollingFrame:GetChildren()) do
                     if itemFrame:IsA("Frame") then
                         local itemName = itemFrame.Name
                         local quantity = itemFrame:FindFirstChild("Chance") and itemFrame.Chance.Text or "x1"
-                        
-                        -- Adds: ItemName - Quantity
                         itemsList = itemsList .. itemName .. " - " .. quantity .. "\n"
                     end
                 end
-                itemsList = itemsList .. "```" -- Closes the code block
+                itemsList = itemsList .. "```" 
 
                 if itemsList ~= "```\n```" then
+                    -- Create the Investigation string from your dropdown variables
+                    local investigationInfo = string.format(
+                        "Stage: %s\nLevel: %s\nDifficulty: %s",
+                        tostring(selectedStage),
+                        tostring(selectedLevel),
+                        tostring(selectedDifficulty)
+                    )
+
                     local data = {
                         ["embeds"] = {{
                             ["title"] = "Investigation Results",
-                            ["color"] = 65280, -- Green
+                            ["color"] = 65280, 
                             ["fields"] = {
                                 {["name"] = "User", ["value"] = "||" .. player.Name .. "||", ["inline"] = false},
+                                {["name"] = "**Investigation:**", ["value"] = investigationInfo, ["inline"] = false},
                                 {["name"] = "Results", ["value"] = itemsList, ["inline"] = false},
                                 {["name"] = "Total Loot", ["value"] = tostring(totalLootCount), ["inline"] = false}
                             }
