@@ -318,60 +318,6 @@ local function monitorKickMessages()
 	end
 end
 
-local HttpService = game:GetService("HttpService")
-local lastLootState = false
-
-task.spawn(function()
-    while true do
-        task.wait(1)
-        if not WebhookEnabled or WebhookURL == "" then continue end
-
-        local lootGui = player.PlayerGui:FindFirstChild("Loot")
-        if lootGui then
-            local isEnabled = lootGui.Enabled
-            
-            -- Trigger only when GUI opens (False -> True)
-            if isEnabled and not lastLootState then
-                local scrollingFrame = lootGui.Results.Main.ScrollingFrame
-                local itemsList = ""
-                
-                -- Loop through all items in the ScrollingFrame
-                for _, itemFrame in pairs(scrollingFrame:GetChildren()) do
-                    if itemFrame:IsA("Frame") then
-                        local itemName = itemFrame.Name
-                        local quantity = itemFrame:FindFirstChild("Chance") and itemFrame.Chance.Text or "x1"
-                        itemsList = itemsList .. itemName .. " - " .. quantity .. "\n"
-                    end
-                end
-
-                if itemsList ~= "" then
-                    local data = {
-                        ["embeds"] = {{
-                            ["title"] = "Investigation Results",
-                            ["color"] = 65280, -- Green
-                            ["fields"] = {
-                                {["name"] = "User", ["value"] = "||" .. player.Name .. "||", ["inline"] = false},
-                                {["name"] = "Results", ["value"] = itemsList, ["inline"] = false},
-                                {["name"] = "Total Time", ["value"] = os.date("%X"), ["inline"] = false}
-                            }
-                        }}
-                    }
-                    
-                    pcall(function()
-                        request({
-                            Url = WebhookURL,
-                            Method = "POST",
-                            Headers = {["Content-Type"] = "application/json"},
-                            Body = HttpService:JSONEncode(data)
-                        })
-                    end)
-                end
-            end
-            lastLootState = isEnabled
-        end
-    end
-end)
-
 do
 	Fluent:Notify({
 		Title = "Investigation Farm Hub",
@@ -528,3 +474,60 @@ SaveManager:BuildConfigSection(Tabs.Settings)
 Window:SelectTab(1)
 
 SaveManager:LoadAutoloadConfig()
+
+local HttpService = game:GetService("HttpService")
+local lastLootState = false
+
+task.spawn(function()
+    while true do
+        task.wait(1)
+			
+        if not WebhookEnabled or WebhookURL == "" then continue end
+
+        local lootGui = player.PlayerGui:FindFirstChild("Loot")
+        if lootGui then
+            local isEnabled = lootGui.Enabled
+            
+            if isEnabled and not lastLootState then
+                task.wait(0.5) -- Wait for items to load in the frame
+
+                local scrollingFrame = lootGui.Results.Main.ScrollingFrame
+                local itemsList = ""
+                
+                for _, itemFrame in pairs(scrollingFrame:GetChildren()) do
+                    if itemFrame:IsA("Frame") then
+                        local itemName = itemFrame.Name
+                        local quantity = itemFrame:FindFirstChild("Chance") and itemFrame.Chance.Text or "x1"
+                        
+                        -- Format: [itemname] - [Quantity]
+                        itemsList = itemsList .. itemName .. " - " .. quantity .. "\n"
+                    end
+                end
+
+                if itemsList ~= "" then
+                    local data = {
+                        ["embeds"] = {{
+                            ["title"] = "Investigation Results",
+                            ["color"] = 65280, -- Green
+                            ["fields"] = {
+                                {["name"] = "User", ["value"] = "||" .. player.Name .. "||", ["inline"] = false},
+                                {["name"] = "Results", ["value"] = itemsList, ["inline"] = false},
+                                {["name"] = "Total Time", ["value"] = os.date("%X"), ["inline"] = false}
+                            }
+                        }}
+                    }
+                    
+                    pcall(function()
+                        request({
+                            Url = WebhookURL,
+                            Method = "POST",
+                            Headers = {["Content-Type"] = "application/json"},
+                            Body = HttpService:JSONEncode(data)
+                        })
+                    end)
+                end
+            end
+            lastLootState = isEnabled
+        end
+    end
+end)
