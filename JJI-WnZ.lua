@@ -304,31 +304,14 @@ end
 
 local function monitorKickMessages()
 	while rejoinOnKickEnabled do
-		task.wait(0.5)
+		task.wait(1)
 		
-		local coreGui = game:GetService("CoreGui")
-		local kickPrompt = coreGui:FindFirstChild("RobloxPromptGui") and coreGui.RobloxPromptGui:FindFirstChild("promptOverlay")
+		local promptOverlay = game:GetService("CoreGui"):FindFirstChild("RobloxPromptGui"):FindFirstChild("promptOverlay")
+		local errorPrompt = promptOverlay and promptOverlay:FindFirstChild("ErrorPrompt")
 		
-		if kickPrompt and kickPrompt.Visible then
-			if game.PlaceId ~= LOBBY_PLACE_ID then
-				TeleportService:Teleport(LOBBY_PLACE_ID, player)
-				break
-			end
-		end
-		
-		for _, gui in pairs(player.PlayerGui:GetChildren()) do
-			if gui:IsA("ScreenGui") then
-				for _, obj in pairs(gui:GetDescendants()) do
-					if obj:IsA("TextLabel") or obj:IsA("TextButton") then
-						local text = obj.Text:lower()
-						if text:find("kick") or text:find("disconnect") or text:find("banned") or text:find("removed") then
-							if game.PlaceId ~= LOBBY_PLACE_ID then
-								TeleportService:Teleport(LOBBY_PLACE_ID, player)
-								break
-							end
-						end
-					end
-				end
+		if errorPrompt and errorPrompt.Visible then
+			if game.PlaceId ~= 10450270085 then
+				TeleportService:Teleport(10450270085, player)
 			end
 		end
 	end
