@@ -345,22 +345,18 @@ do
 					Duration = 3
 				})
 			else
-				task.spawn(autoFarmLoop)
-			end
-		end
-	end)
-
-AutoFarmToggle:OnChanged(function()
-    autoFarmEnabled = Options.AutoFarmToggle.Value
-    
-    if autoFarmEnabled then
-        Fluent:Notify({
+		    do task.spawn(autoFarmLoop) then
+            Fluent:Notify({
             Title = "Kill Aura",
             Content = "You might have to wait for 30s for Kill Aura to be working properly.",
-            Duration = 5
+            Duration = 30
         })
     end
 end)
+		end
+			end
+		end
+	end)
 	
 	local AutoJoinLobbyToggle = Tabs.Main:AddToggle("AutoJoinLobbyToggle", {
 		Title = "Auto Join Investigation (Lobby)",
