@@ -476,6 +476,7 @@ SaveManager:LoadAutoloadConfig()
 
 local HttpService = game:GetService("HttpService")
 local lastLootState = false
+local totalLootCount = 0 -- This tracks how many times you've gotten loot
 
 task.spawn(function()
     while true do
@@ -487,23 +488,27 @@ task.spawn(function()
         if lootGui then
             local isEnabled = lootGui.Enabled
             
+            -- Trigger only when the GUI state changes to Enabled (becomes true)
             if isEnabled and not lastLootState then
+                totalLootCount = totalLootCount + 1 -- Add 1 to the counter
                 task.wait(0.5) -- Wait for items to load in the frame
 
                 local scrollingFrame = lootGui.Results.Main.ScrollingFrame
-                local itemsList = ""
+                local itemsList = "```\n" -- Starts the code block
                 
+                -- Loop through all items
                 for _, itemFrame in pairs(scrollingFrame:GetChildren()) do
                     if itemFrame:IsA("Frame") then
                         local itemName = itemFrame.Name
                         local quantity = itemFrame:FindFirstChild("Chance") and itemFrame.Chance.Text or "x1"
                         
-                        -- Format: [itemname] - [Quantity]
+                        -- Adds: ItemName - Quantity
                         itemsList = itemsList .. itemName .. " - " .. quantity .. "\n"
                     end
                 end
+                itemsList = itemsList .. "```" -- Closes the code block
 
-                if itemsList ~= "" then
+                if itemsList ~= "```\n```" then
                     local data = {
                         ["embeds"] = {{
                             ["title"] = "Investigation Results",
@@ -511,7 +516,7 @@ task.spawn(function()
                             ["fields"] = {
                                 {["name"] = "User", ["value"] = "||" .. player.Name .. "||", ["inline"] = false},
                                 {["name"] = "Results", ["value"] = itemsList, ["inline"] = false},
-                                {["name"] = "Total Time", ["value"] = os.date("%X"), ["inline"] = false}
+                                {["name"] = "Total Loot", ["value"] = tostring(totalLootCount), ["inline"] = false}
                             }
                         }}
                     }
