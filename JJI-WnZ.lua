@@ -47,6 +47,7 @@ local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 local autoFarmEnabled = false
 local autoJoinLobbyEnabled = false
 local autoJoinEnabled = false
+local disableChestAnimation = false
 local rejoinOnKickEnabled = false
 local selectedStage = "Cursed School"
 local selectedLevel = 1
@@ -381,6 +382,16 @@ do
 			task.spawn(monitorKickMessages)
 		end
 	end)
+
+	local DisableChestToggle = Tabs.Main:AddToggle("DisableChestToggle", { 
+    Title = "Disable Chest Animation",
+	Description = "Must Enabled.",
+    Default = true
+})
+
+DisableChestToggle:OnChanged(function()
+    disableChestAnimation = Options.DisableChestToggle.Value
+end)
 	
 	Tabs.AutoJoin:AddParagraph({
 		Title = "Auto Join Settings",
@@ -536,6 +547,30 @@ task.spawn(function()
                 end
             end
             lastLootState = isEnabled
+        end
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        
+        if disableChestAnimation then
+    
+            local replicatedData = player:FindFirstChild("ReplicatedData")
+            local settingsFolder = replicatedData and replicatedData:FindFirstChild("settings")
+            
+            if settingsFolder then
+                local skipAnimBool = settingsFolder:FindFirstChild("Skip Chest Animation")
+                
+                if skipAnimBool and skipAnimBool:IsA("BoolValue") then
+                    if skipAnimBool.Value == false then
+                        pcall(function()
+                            game:GetService("ReplicatedStorage").Remotes.Server.Data.ChangeSetting:InvokeServer("Skip Chest Animation")
+                        end)
+                    end
+                end
+            end
         end
     end
 end)
