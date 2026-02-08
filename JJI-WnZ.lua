@@ -99,18 +99,18 @@ local function teleportAndFirePrompts()
 				if proximityPrompt then
 					for i = 1, 15 do
 						fireproximityprompt(proximityPrompt)
-						task.wait(0.02)
+						task.wait(0)
 					end
 				end
 				
 				if spawnLocation then
 					humanoidRootPart.CFrame = spawnLocation.CFrame
-					task.wait(0.03)
+					task.wait(0)
 					
 					if proximityPrompt then
 						for i = 1, 10 do
 							fireproximityprompt(proximityPrompt)
-							task.wait(0.02)
+							task.wait(0)
 						end
 					end
 				end
