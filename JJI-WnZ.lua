@@ -50,7 +50,7 @@ local rejoinOnKickEnabled = false
 local selectedStage = "Cursed School"
 local selectedLevel = 1
 local selectedDifficulty = "Easy"
-local currentTarget = nil
+local currentMobIndex = 1
 
 player.CharacterAdded:Connect(function(newCharacter)
 	character = newCharacter
@@ -167,35 +167,33 @@ local function clickUIButtons()
 	end
 end
 
-local function isTargetAlive()
-	if not currentTarget or not currentTarget.Parent then
-		return false
-	end
+local function teleportToNextMob()
+	if not humanoidRootPart or not humanoidRootPart.Parent then return end
 	
-	local humanoid = currentTarget:FindFirstChildOfClass("Humanoid")
-	if humanoid and humanoid.Health > 0 then
-		return true
-	end
-	
-	return false
-end
-
-local function teleportToAliveMob()
-	if not humanoidRootPart or not humanoidRootPart.Parent then return nil end
-	
+	local mobs = {}
 	for _, mob in pairs(mobsFolder:GetChildren()) do
-		if mob:IsA("Model") and mob ~= currentTarget then
-			local mobRoot = mob:FindFirstChild("HumanoidRootPart") or mob:FindFirstChild("Torso")
-			local humanoid = mob:FindFirstChildOfClass("Humanoid")
-			
-			if mobRoot and humanoid and humanoid.Health > 0 then
-				humanoidRootPart.CFrame = mobRoot.CFrame
-				return mob
-			end
+		if mob:IsA("Model") then
+			table.insert(mobs, mob)
 		end
 	end
 	
-	return nil
+	if #mobs == 0 then
+		currentMobIndex = 1
+		return
+	end
+	
+	if currentMobIndex > #mobs then
+		currentMobIndex = 1
+	end
+	
+	local mob = mobs[currentMobIndex]
+	local mobRoot = mob:FindFirstChild("HumanoidRootPart") or mob:FindFirstChild("Torso")
+	
+	if mobRoot then
+		humanoidRootPart.CFrame = mobRoot.CFrame
+	end
+	
+	currentMobIndex = currentMobIndex + 1
 end
 
 local function isMobsFolderEmpty()
@@ -221,7 +219,7 @@ local function autoFarmLoop()
 		return
 	end
 	
-	currentTarget = teleportToAliveMob()
+	teleportToNextMob()
 	
 	local lastTeleportTime = 0
 	local wasEmpty = false
@@ -232,16 +230,8 @@ local function autoFarmLoop()
 			continue
 		end
 		
-		if not isTargetAlive() then
-			currentTarget = teleportToAliveMob()
-		end
-		
+		teleportToNextMob()
 		checkAndKillNearbyMobs()
-		
-		if not isTargetAlive() then
-			currentTarget = teleportToAliveMob()
-		end
-		
 		teleportAndFirePrompts()
 		pressEIfDropsExist()
 		clickUIButtons()
@@ -251,11 +241,11 @@ local function autoFarmLoop()
 		if isEmpty and not wasEmpty then
 			lastTeleportTime = tick()
 			wasEmpty = true
-			currentTarget = nil
+			currentMobIndex = 1
 		elseif not isEmpty then
 			if wasEmpty and tick() - lastTeleportTime >= EMPTY_CHECK_TIME then
 				if hasModelInMobs() then
-					currentTarget = teleportToAliveMob()
+					teleportToNextMob()
 				end
 				lastTeleportTime = tick()
 			end
