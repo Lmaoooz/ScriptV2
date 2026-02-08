@@ -345,6 +345,11 @@ do
 					Duration = 3
 				})
 			else
+				Fluent:Notify({
+                Title = "Kill Aura",
+                Content = "You might have to wait for 30s for Kill Aura to be working properly.",
+                Duration = 5
+                })
 		        task.spawn(autoFarmLoop)
 			end
 		end
@@ -464,7 +469,7 @@ Tabs.Webhook:AddInput("WebhookInput", {
 
 Tabs.Webhook:AddInput("PingInput", {
     Title = "Ping When Got",
-    Description = "Make sure the item name is correct."
+    Description = "Make sure the item name is correct.",
     Default = "",
     Placeholder = "e.g. Domain Shard",
     Callback = function(Value)
