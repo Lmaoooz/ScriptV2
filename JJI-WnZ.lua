@@ -53,6 +53,7 @@ local selectedStage = "Cursed School"
 local selectedLevel = 1
 local selectedDifficulty = "Easy"
 local currentMobIndex = 1
+local PingItem = ""
 local WebhookURL = ""
 local WebhookEnabled = false
 
@@ -348,6 +349,18 @@ do
 			end
 		end
 	end)
+
+AutoFarmToggle:OnChanged(function()
+    autoFarmEnabled = Options.AutoFarmToggle.Value
+    
+    if autoFarmEnabled then
+        Fluent:Notify({
+            Title = "Kill Aura",
+            Content = "You might have to wait for 30s for Kill Aura to be working properly.",
+            Duration = 5
+        })
+    end
+end)
 	
 	local AutoJoinLobbyToggle = Tabs.Main:AddToggle("AutoJoinLobbyToggle", {
 		Title = "Auto Join Investigation (Lobby)",
@@ -461,6 +474,16 @@ Tabs.Webhook:AddInput("WebhookInput", {
     end
 })
 
+Tabs.Webhook:AddInput("PingInput", {
+    Title = "Ping When Got",
+    Description = "Make sure the item name is correct."
+    Default = "",
+    Placeholder = "e.g. Domain Shard",
+    Callback = function(Value)
+        PingItem = Value
+    end
+})
+
 local WebhookToggle = Tabs.Webhook:AddToggle("WebhookToggle", {
     Title = "Enable Webhook", 
     Default = false 
@@ -504,40 +527,47 @@ task.spawn(function()
 
                 local scrollingFrame = lootGui.Results.Main.ScrollingFrame
                 local itemsList = "```\n" 
+                local shouldPing = false
                 
                 for _, itemFrame in pairs(scrollingFrame:GetChildren()) do
                     if itemFrame:IsA("Frame") then
                         local itemName = itemFrame.Name
                         local quantity = itemFrame:FindFirstChild("Chance") and itemFrame.Chance.Text or "x1"
+                        
+                        -- Check if we should ping for this item
+                        if PingItem ~= "" and string.find(string.lower(itemName), string.lower(PingItem)) then
+                            shouldPing = true
+                        end
+
                         itemsList = itemsList .. itemName .. " - " .. quantity .. "\n"
                     end
                 end
                 itemsList = itemsList .. "```" 
 
                 if itemsList ~= "```\n```" then
-                    -- Create the Investigation string from your dropdown variables
                     local investigationInfo = string.format(
                         "Stage: %s\nLevel: %s\nDifficulty: %s",
-                        tostring(selectedStage),
-                        tostring(selectedLevel),
-                        tostring(selectedDifficulty)
+                        tostring(selectedStage or "N/A"),
+                        tostring(selectedLevel or "N/A"),
+                        tostring(selectedDifficulty or "N/A")
                     )
 
                     local data = {
+                        ["content"] = shouldPing and "@everyone" or "", -- Pings if item matches
                         ["embeds"] = {{
-                            ["title"] = "Opened Loot:",
+                            ["title"] = "Investigation Results",
                             ["color"] = 65280, 
                             ["fields"] = {
                                 {["name"] = "User:", ["value"] = "||" .. player.Name .. "||", ["inline"] = false},
-                                {["name"] = "**Investigation Info:**", ["value"] = "```" .. investigationInfo .. "```", ["inline"] = false},
+                                {["name"] = "**Investigation:**", ["value"] = "```" .. investigationInfo .. "```", ["inline"] = false},
                                 {["name"] = "Results:", ["value"] = itemsList, ["inline"] = false},
-                                {["name"] = "Total Loot Opened:", ["value"] = tostring(totalLootCount), ["inline"] = false}
+                                {["name"] = "Total Loot:", ["value"] = tostring(totalLootCount), ["inline"] = false}
                             }
                         }}
                     }
                     
                     pcall(function()
-                        request({
+                        (syn and syn.request or http_request or request)({
                             Url = WebhookURL,
                             Method = "POST",
                             Headers = {["Content-Type"] = "application/json"},
