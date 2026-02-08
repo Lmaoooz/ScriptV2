@@ -348,7 +348,7 @@ do
 				Fluent:Notify({
                 Title = "Kill Aura",
                 Content = "You might have to wait for 30s for Kill Aura to be working properly.",
-                Duration = 5
+                Duration = 30
                 })
 		        task.spawn(autoFarmLoop)
 			end
