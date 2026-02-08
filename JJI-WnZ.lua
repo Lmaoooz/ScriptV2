@@ -30,9 +30,7 @@ local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TeleportService = game:GetService("TeleportService")
 
-local DETECTION_RANGE = 999999999
 local CHECK_INTERVAL = 0
-local KILL_DELAY = 0.1
 local EMPTY_CHECK_TIME = 3
 local LOBBY_PLACE_ID = 10450270085
 
@@ -52,7 +50,6 @@ local rejoinOnKickEnabled = false
 local selectedStage = "Cursed School"
 local selectedLevel = 1
 local selectedDifficulty = "Easy"
-local currentTargetMob = nil
 
 player.CharacterAdded:Connect(function(newCharacter)
 	character = newCharacter
@@ -62,19 +59,17 @@ end)
 local function checkAndKillNearbyMobs()
 	if not humanoidRootPart or not humanoidRootPart.Parent then return end
 	
+	local mobsToKill = {}
 	for _, mob in pairs(mobsFolder:GetChildren()) do
 		if mob:IsA("Model") then
-			local mobRoot = mob:FindFirstChild("HumanoidRootPart") or mob:FindFirstChild("Torso")
-			local humanoid = mob:FindFirstChildOfClass("Humanoid")
-			
-			if mobRoot and humanoid and humanoid.Health > 0 then
-				local distance = (humanoidRootPart.Position - mobRoot.Position).Magnitude
-				
-				if distance <= DETECTION_RANGE then
-					humanoid.Health = 0
-					task.wait(KILL_DELAY)
-				end
-			end
+			table.insert(mobsToKill, mob)
+		end
+	end
+	
+	for _, mob in pairs(mobsToKill) do
+		local humanoid = mob:FindFirstChildOfClass("Humanoid")
+		if humanoid and humanoid.Health > 0 then
+			humanoid.Health = 0
 		end
 	end
 end
@@ -98,14 +93,27 @@ local function teleportAndFirePrompts()
 			
 			if modelRoot then
 				humanoidRootPart.CFrame = modelRoot.CFrame
-				task.wait(0.1)
+				task.wait(0.03)
 				
 				local proximityPrompt = item:FindFirstChildOfClass("ProximityPrompt", true)
 				if proximityPrompt then
-					fireproximityprompt(proximityPrompt)
+					for i = 1, 15 do
+						fireproximityprompt(proximityPrompt)
+						task.wait(0.02)
+					end
 				end
 				
-				task.wait(0.1)
+				if spawnLocation then
+					humanoidRootPart.CFrame = spawnLocation.CFrame
+					task.wait(0.03)
+					
+					if proximityPrompt then
+						for i = 1, 10 do
+							fireproximityprompt(proximityPrompt)
+							task.wait(0.02)
+						end
+					end
+				end
 			end
 		end
 	end
@@ -123,6 +131,22 @@ local function pressEIfDropsExist()
 	end
 end
 
+local function isFullyVisible(guiObject)
+	if not guiObject then return false end
+	
+	local current = guiObject
+	while current and current ~= game do
+		if current:IsA("GuiObject") then
+			if not current.Visible then
+				return false
+			end
+		end
+		current = current.Parent
+	end
+	
+	return true
+end
+
 local function clickUIButtons()
 	local buttons = {
 		player.PlayerGui:FindFirstChild("StorylineDialogue") and player.PlayerGui.StorylineDialogue:FindFirstChild("Frame") and player.PlayerGui.StorylineDialogue.Frame:FindFirstChild("Dialogue") and player.PlayerGui.StorylineDialogue.Frame.Dialogue:FindFirstChild("Skip"),
@@ -132,7 +156,7 @@ local function clickUIButtons()
 	}
 	
 	for _, button in pairs(buttons) do
-		if button and button.Visible and button.Parent.Visible then
+		if button and isFullyVisible(button) then
 			GuiService.SelectedObject = button
 			task.wait(0.05)
 			VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
@@ -144,7 +168,7 @@ local function clickUIButtons()
 end
 
 local function teleportToAliveMob()
-	if not humanoidRootPart or not humanoidRootPart.Parent then return nil end
+	if not humanoidRootPart or not humanoidRootPart.Parent then return false end
 	
 	for _, mob in pairs(mobsFolder:GetChildren()) do
 		if mob:IsA("Model") then
@@ -153,23 +177,10 @@ local function teleportToAliveMob()
 			
 			if mobRoot and humanoid and humanoid.Health > 0 then
 				humanoidRootPart.CFrame = mobRoot.CFrame
-				return mob
+				return true
 			end
 		end
 	end
-	return nil
-end
-
-local function checkCurrentTargetAlive()
-	if not currentTargetMob or not currentTargetMob.Parent then
-		return false
-	end
-	
-	local humanoid = currentTargetMob:FindFirstChildOfClass("Humanoid")
-	if humanoid and humanoid.Health > 0 then
-		return true
-	end
-	
 	return false
 end
 
@@ -182,13 +193,10 @@ local function isMobsFolderEmpty()
 	return true
 end
 
-local function hasAliveMobs()
+local function hasModelInMobs()
 	for _, mob in pairs(mobsFolder:GetChildren()) do
 		if mob:IsA("Model") then
-			local humanoid = mob:FindFirstChildOfClass("Humanoid")
-			if humanoid and humanoid.Health > 0 then
-				return true
-			end
+			return true
 		end
 	end
 	return false
@@ -199,7 +207,7 @@ local function autoFarmLoop()
 		return
 	end
 	
-	currentTargetMob = teleportToAliveMob()
+	teleportToAliveMob()
 	
 	local lastTeleportTime = 0
 	local wasEmpty = false
@@ -210,25 +218,21 @@ local function autoFarmLoop()
 			continue
 		end
 		
+		teleportToAliveMob()
 		checkAndKillNearbyMobs()
 		teleportAndFirePrompts()
 		pressEIfDropsExist()
 		clickUIButtons()
-		
-		if not checkCurrentTargetAlive() and hasAliveMobs() then
-			currentTargetMob = teleportToAliveMob()
-		end
 		
 		local isEmpty = isMobsFolderEmpty()
 		
 		if isEmpty and not wasEmpty then
 			lastTeleportTime = tick()
 			wasEmpty = true
-			currentTargetMob = nil
 		elseif not isEmpty then
 			if wasEmpty and tick() - lastTeleportTime >= EMPTY_CHECK_TIME then
-				if hasAliveMobs() then
-					currentTargetMob = teleportToAliveMob()
+				if hasModelInMobs() then
+					teleportToAliveMob()
 				end
 				lastTeleportTime = tick()
 			end
@@ -326,7 +330,7 @@ do
 	
 	local AutoFarmToggle = Tabs.Main:AddToggle("AutoFarmToggle", {
 		Title = "Auto Farm Investigation",
-    Description = "Auto Kill Aura/Replay/Rescue/Collect/Etc.",
+		Description = "Auto Kill Aura/Replay/Rescue/Collect/Etc.",
 		Default = false
 	})
 	
@@ -347,7 +351,7 @@ do
 	
 	local AutoJoinLobbyToggle = Tabs.Main:AddToggle("AutoJoinLobbyToggle", {
 		Title = "Auto Join Investigation (Lobby)",
-    Description = "Auto teleport into investigation area.",
+		Description = "Auto teleport into investigation area.",
 		Default = false
 	})
 	
@@ -368,7 +372,7 @@ do
 	
 	local RejoinOnKickToggle = Tabs.Main:AddToggle("RejoinOnKickToggle", {
 		Title = "Rejoin to lobby if kicked",
-    Description = "Automatically Rejoins You When Got Any Kick Message.",
+		Description = "Automatically Rejoins You When Got Any Kick Message.",
 		Default = false
 	})
 	
@@ -419,7 +423,7 @@ do
 	
 	local AutoJoinToggle = Tabs.AutoJoin:AddToggle("AutoJoinToggle", {
 		Title = "Enable Auto Join",
-    Description = "Auto Join Your Selected Stage",
+		Description = "Auto Join Your Selected Stage",
 		Default = false
 	})
 	
