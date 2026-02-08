@@ -30,7 +30,7 @@ local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TeleportService = game:GetService("TeleportService")
 
-local CHECK_INTERVAL = 0
+local CHECK_INTERVAL = 1
 local EMPTY_CHECK_TIME = 3
 local LOBBY_PLACE_ID = 10450270085
 
