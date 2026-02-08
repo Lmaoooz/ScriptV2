@@ -514,12 +514,12 @@ task.spawn(function()
 
                     local data = {
                         ["embeds"] = {{
-                            ["title"] = "Investigation Results",
+                            ["title"] = "Opened Loot:",
                             ["color"] = 65280, 
                             ["fields"] = {
-                                {["name"] = "User", ["value"] = "||" .. player.Name .. "||", ["inline"] = false},
-                                {["name"] = "**Investigation:**", ["value"] = investigationInfo, ["inline"] = false},
-                                {["name"] = "Results", ["value"] = itemsList, ["inline"] = false},
+                                {["name"] = "User:", ["value"] = "||" .. player.Name .. "||", ["inline"] = false},
+                                {["name"] = "**Investigation Info:**", ["value"] = "```" .. investigationInfo .. "```", ["inline"] = false},
+                                {["name"] = "Results:", ["value"] = itemsList, ["inline"] = false},
                                 {["name"] = "Total Loot", ["value"] = tostring(totalLootCount), ["inline"] = false}
                             }
                         }}
