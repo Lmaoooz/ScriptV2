@@ -324,10 +324,16 @@ end
 
 do
 	Fluent:Notify({
-		Title = "Investigation Farm Hub",
+		Title = "Script",
 		Content = "Script loaded successfully!",
 		Duration = 5
 	})
+
+        Fluent:Notify({
+            Title = "Kill Aura",
+            Content = "You might have to wait for 30s for Kill Aura to be working properly.",
+            Duration = 30
+        })
 	
 	local AutoFarmToggle = Tabs.Main:AddToggle("AutoFarmToggle", {
 		Title = "Auto Farm Investigation",
@@ -345,15 +351,7 @@ do
 					Duration = 3
 				})
 			else
-		    do task.spawn(autoFarmLoop) then
-            Fluent:Notify({
-            Title = "Kill Aura",
-            Content = "You might have to wait for 30s for Kill Aura to be working properly.",
-            Duration = 30
-        })
-    end
-end)
-		end
+		        task.spawn(autoFarmLoop)
 			end
 		end
 	end)
