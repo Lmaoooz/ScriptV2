@@ -52,6 +52,8 @@ local selectedStage = "Cursed School"
 local selectedLevel = 1
 local selectedDifficulty = "Easy"
 local currentMobIndex = 1
+local WebhookURL = ""
+local WebhookEnabled = false
 
 player.CharacterAdded:Connect(function(newCharacter)
 	character = newCharacter
@@ -438,9 +440,6 @@ do
 			end
 		end
 	end)
-
-local WebhookURL = ""
-local WebhookEnabled = false
 
 Tabs.Webhook:AddInput("WebhookInput", {
     Title = "Webhook URL",
