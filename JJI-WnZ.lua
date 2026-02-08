@@ -520,7 +520,7 @@ task.spawn(function()
                                 {["name"] = "User:", ["value"] = "||" .. player.Name .. "||", ["inline"] = false},
                                 {["name"] = "**Investigation Info:**", ["value"] = "```" .. investigationInfo .. "```", ["inline"] = false},
                                 {["name"] = "Results:", ["value"] = itemsList, ["inline"] = false},
-                                {["name"] = "Total Loot", ["value"] = tostring(totalLootCount), ["inline"] = false}
+                                {["name"] = "Total Loot:", ["value"] = tostring(totalLootCount), ["inline"] = false}
                             }
                         }}
                     }
