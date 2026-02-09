@@ -767,8 +767,9 @@ task.spawn(function()
                         tostring(selectedDifficulty or "N/A")
                     )
 
+                    -- CORRECTED TABLE CONSTRUCTOR START
                     local data = {
-                        ["content"] = shouldPing and "@everyone" or "", -- Pings if item matches
+                        ["content"] = shouldPing and "@everyone" or "", 
                         ["embeds"] = {{
                             ["title"] = "Investigation Results",
                             ["color"] = 65280, 
@@ -780,7 +781,8 @@ task.spawn(function()
                             }
                         }}
                     }
-                    
+                    -- CORRECTED TABLE CONSTRUCTOR END
+                
                     pcall(function()
                         (syn and syn.request or http_request or request)({
                             Url = WebhookURL,
