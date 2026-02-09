@@ -31,8 +31,9 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 
-local CHECK_INTERVAL = 0
+local CHECK_INTERVAL = 0.5
 local EMPTY_CHECK_TIME = 3
 local LOBBY_PLACE_ID = 10450270085
 
@@ -47,8 +48,8 @@ local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
 local autoFarmEnabled = false
 local autoJoinLobbyEnabled = false
-local disableChestAnimation = false
 local autoJoinEnabled = false
+local disableChestAnimation = false
 local rejoinOnKickEnabled = false
 local autoFarmMissionEnabled = false
 local selectedStage = "Cursed School"
@@ -64,8 +65,6 @@ player.CharacterAdded:Connect(function(newCharacter)
 	character = newCharacter
 	humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 end)
-
--- [Previous functions remain the same: checkAndKillNearbyMobs, teleportAndFirePrompts, etc.]
 
 local function checkAndKillNearbyMobs()
 	if not humanoidRootPart or not humanoidRootPart.Parent then return end
@@ -115,7 +114,7 @@ local function teleportAndFirePrompts()
 				
 				if spawnLocation then
 					humanoidRootPart.CFrame = spawnLocation.CFrame
-					task.wait(0.03)
+					task.wait(0)
 					
 					if proximityPrompt then
 						for i = 1, 10 do
@@ -235,6 +234,11 @@ local function setDropsProximityPrompts()
 			end)
 		end
 	end
+	
+	-- Also press E key
+	VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+	task.wait(0.05)
+	VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
 end
 
 local function countStars(questCard)
@@ -350,9 +354,29 @@ local function autoFarmMissionLoop()
 	while autoFarmMissionEnabled do
 		task.wait(0.5)
 		
+		-- Auto kill mobs in mission
+		checkAndKillNearbyMobs()
+		
+		-- Set drops proximity prompts
 		setDropsProximityPrompts()
 		
 		local currentlyOnMission = isOnMission()
+		local progress = getMeterProgress()
+		
+		-- If progress is 100%, teleport to claim position
+		if progress == "100%" then
+			character:PivotTo(CFrame.new(Vector3.new(-512.312317, 4470.245117, -15619.548828)))
+			task.wait(0.5)
+			claimMissionReward()
+			task.wait(2)
+			
+			-- Wait until progress is no longer 100%
+			while getMeterProgress() == "100%" do
+				task.wait(0.5)
+			end
+			
+			task.wait(1)
+		end
 		
 		if wasOnMission and not currentlyOnMission then
 			waitingForCooldown = true
@@ -369,12 +393,6 @@ local function autoFarmMissionLoop()
 		end
 		
 		if not currentlyOnMission then
-			local progress = getMeterProgress()
-			if progress == "100%" then
-				claimMissionReward()
-				task.wait(1)
-			end
-			
 			local questNumber = find3StarCurseQuest()
 			if not questNumber then
 				rerollMissions()
@@ -484,31 +502,14 @@ end
 
 local function monitorKickMessages()
 	while rejoinOnKickEnabled do
-		task.wait(0.5)
+		task.wait(1)
 		
-		local coreGui = game:GetService("CoreGui")
-		local kickPrompt = coreGui:FindFirstChild("RobloxPromptGui") and coreGui.RobloxPromptGui:FindFirstChild("promptOverlay")
+		local promptOverlay = game:GetService("CoreGui"):FindFirstChild("RobloxPromptGui") and game:GetService("CoreGui").RobloxPromptGui:FindFirstChild("promptOverlay")
+		local errorPrompt = promptOverlay and promptOverlay:FindFirstChild("ErrorPrompt")
 		
-		if kickPrompt and kickPrompt.Visible then
-			if game.PlaceId ~= LOBBY_PLACE_ID then
-				TeleportService:Teleport(LOBBY_PLACE_ID, player)
-				break
-			end
-		end
-		
-		for _, gui in pairs(player.PlayerGui:GetChildren()) do
-			if gui:IsA("ScreenGui") then
-				for _, obj in pairs(gui:GetDescendants()) do
-					if obj:IsA("TextLabel") or obj:IsA("TextButton") then
-						local text = obj.Text:lower()
-						if text:find("kick") or text:find("disconnect") or text:find("banned") or text:find("removed") then
-							if game.PlaceId ~= LOBBY_PLACE_ID then
-								TeleportService:Teleport(LOBBY_PLACE_ID, player)
-								break
-							end
-						end
-					end
-				end
+		if errorPrompt and errorPrompt.Visible then
+			if game.PlaceId ~= 10450270085 then
+				TeleportService:Teleport(10450270085, player)
 			end
 		end
 	end
@@ -537,6 +538,11 @@ do
 					Duration = 3
 				})
 			else
+				Fluent:Notify({
+					Title = "Kill Aura",
+					Content = "You might have to wait for 30s for Kill Aura to be working properly.",
+					Duration = 5
+				})
 				task.spawn(autoFarmLoop)
 			end
 		end
@@ -562,16 +568,6 @@ do
 			end
 		end
 	end)
-
-	local DisableChestToggle = Tabs.Main:AddToggle("DisableChestToggle", { 
-    Title = "Disable Chest Animation",
-	Description = "Must Enabled.",
-    Default = true
-})
-
-DisableChestToggle:OnChanged(function()
-    disableChestAnimation = Options.DisableChestToggle.Value
-end)
 	
 	local RejoinOnKickToggle = Tabs.Main:AddToggle("RejoinOnKickToggle", {
 		Title = "Rejoin to lobby if kicked",
@@ -584,6 +580,16 @@ end)
 		if rejoinOnKickEnabled then
 			task.spawn(monitorKickMessages)
 		end
+	end)
+	
+	local DisableChestToggle = Tabs.Main:AddToggle("DisableChestToggle", { 
+		Title = "Disable Chest Animation",
+		Description = "Must Enabled.",
+		Default = true
+	})
+	
+	DisableChestToggle:OnChanged(function()
+		disableChestAnimation = Options.DisableChestToggle.Value
 	end)
 	
 	Tabs.AutoJoin:AddParagraph({
@@ -682,7 +688,7 @@ end)
 			WebhookURL = Value
 		end
 	})
-
+	
 	Tabs.Webhook:AddInput("PingInput", {
     Title = "Ping When Got",
     Description = "Make sure the item name is correct."
@@ -692,15 +698,15 @@ end)
         PingItem = Value
     end
 })
-	
-	local WebhookToggle = Tabs.Webhook:AddToggle("WebhookToggle", {
-		Title = "Enable Webhook", 
-		Default = false 
-	})
-	
-	WebhookToggle:OnChanged(function()
-		WebhookEnabled = Options.WebhookToggle.Value
-	end)
+
+local WebhookToggle = Tabs.Webhook:AddToggle("WebhookToggle", {
+    Title = "Enable Webhook", 
+    Default = false 
+})
+
+WebhookToggle:OnChanged(function()
+    WebhookEnabled = Options.WebhookToggle.Value
+end)
 end
 
 SaveManager:SetLibrary(Fluent)
