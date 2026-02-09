@@ -691,7 +691,7 @@ do
 	
 	Tabs.Webhook:AddInput("PingInput", {
     Title = "Ping When Got",
-    Description = "Make sure the item name is correct."
+    Description = "Make sure the item name is correct.",
     Default = "",
     Placeholder = "e.g. Domain Shard",
     Callback = function(Value)
