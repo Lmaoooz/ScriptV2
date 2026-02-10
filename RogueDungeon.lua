@@ -515,7 +515,7 @@ do
 	local HakiToggle = Tabs.Main:AddToggle("HakiToggle", {
 		Title = "Enable Haki",
 		Description = "Auto enable Haki",
-		Default = false
+		Default = true
 	})
 	
 	HakiToggle:OnChanged(function()
@@ -528,7 +528,7 @@ do
 	local RejoinOnKickToggle = Tabs.Main:AddToggle("RejoinOnKickToggle", {
 		Title = "Auto Rejoin When Kicked",
 		Description = "Automatically rejoins lobby when kicked",
-		Default = false
+		Default = true
 	})
 	
 	RejoinOnKickToggle:OnChanged(function()
