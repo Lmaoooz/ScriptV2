@@ -172,12 +172,11 @@ end
 
 -- [TARGET FINDING LOGIC]
 local function findAliveMob()
-	-- Priority: Boss (must be alive)
+	-- Priority: Boss (any boss in folder, even if HP is unknown)
 	for _, boss in pairs(bossFolder:GetChildren()) do
 		if boss:IsA("Model") then
-			local hum = boss:FindFirstChildOfClass("Humanoid")
 			local root = boss:FindFirstChild("HumanoidRootPart") or boss:FindFirstChild("Torso")
-			if hum and hum.Health > 0 and root then
+			if root then
 				return boss, root, true
 			end
 		end
@@ -245,7 +244,7 @@ local function monitorKickMessages()
 	end
 end
 
--- [HEARTBEAT TELEPORT LOOP]
+-- [HEARTBEAT TELEPORT LOOP] - Fixed to always update when target exists
 RunService.Heartbeat:Connect(function()
 	if autoFarmEnabled and currentTargetRoot and currentTargetRoot.Parent and humanoidRootPart and humanoidRootPart.Parent then
 		local behindCFrame = currentTargetRoot.CFrame * CFrame.new(0, 0, 4)
@@ -257,7 +256,7 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
--- [MAIN AUTO FARM LOOP]
+-- [MAIN AUTO FARM LOOP] - Fixed to continuously find targets
 local function autoFarmLoop()
 	equipWeapon()
 	task.wait(0.5)
@@ -267,51 +266,71 @@ local function autoFarmLoop()
 			equipWeapon()
 		end
 		
+		-- Always try to find a target
 		local target, root, isBoss = findAliveMob()
 		
 		if target and root then
 			currentTargetRoot = root
+			
+			-- Always attack
 			pressMouseButton()
+			
+			-- Always use skills
+			for skillKey, enabled in pairs(selectedSkills) do
+				if enabled then
+					useKeySkill(skillKey)
+				end
+			end
 		else
 			currentTargetRoot = nil
 		end
 		
-		for skillKey, enabled in pairs(selectedSkills) do
-			if enabled then
-				useKeySkill(skillKey)
-			end
-		end
-		
+		-- Kill logic
 		killRegularMobs()
 		checkAndKillBosses()
 		
-		task.wait(0.1)
+		task.wait(0)
 	end
 	
 	currentTargetRoot = nil
 end
 
--- [AUTO JOIN LOBBY LOGIC - ONLY IN LOBBY - RUNS ONCE]
-local function autoJoinDungeon()
-	if game.PlaceId ~= LOBBY_ID then return end
-	if not Options.AutoJoinToggle or not Options.AutoJoinToggle.Value then return end
-	
+-- [CHECK IF PLAYER IS IN DUNGEON]
+local function isPlayerInDungeon()
 	pcall(function()
-		-- CHECK IF PORTAL ALREADY EXISTS - If yes, DO NOTHING
 		local dungeonPortals = workspace.Main.Characters:FindFirstChild("Rogue Town")
 		if dungeonPortals then
 			local portalsFolder = dungeonPortals:FindFirstChild("Dungeons")
 			if portalsFolder then
 				local portalPart = portalsFolder:FindFirstChild(selectedDungeon)
 				if portalPart and portalPart:IsA("Part") then
-					-- Portal already exists, player has already entered dungeon
-					-- DO NOT PRESS E AGAIN
-					return
+					local playersFolder = portalPart:FindFirstChild("Players")
+					if playersFolder then
+						for _, stringValue in pairs(playersFolder:GetChildren()) do
+							if stringValue:IsA("StringValue") and stringValue.Value == player.Name then
+								return true
+							end
+						end
+					end
 				end
 			end
 		end
+	end)
+	return false
+end
+
+-- [AUTO JOIN LOBBY LOGIC - ONLY IN LOBBY]
+local function autoJoinDungeon()
+	if game.PlaceId ~= LOBBY_ID then return end
+	if not Options.AutoJoinToggle or not Options.AutoJoinToggle.Value then return end
+	
+	pcall(function()
+		-- Check if already in dungeon
+		if isPlayerInDungeon() then
+			return
+		end
 		
-		-- Portal doesn't exist, proceed with joining
+		-- Portal doesn't exist or player not in it, proceed with joining
 		local dungeonSpawn = player.PlayerGui.Button:FindFirstChild("Dungeon Spawn")
 		if not dungeonSpawn then return end
 		
@@ -337,23 +356,28 @@ local function autoJoinDungeon()
 			task.wait(1)
 		end
 		
-		-- Check again if portal now exists
-		dungeonPortals = workspace.Main.Characters:FindFirstChild("Rogue Town")
+		-- Find portal and keep pressing E until player is in dungeon
+		local dungeonPortals = workspace.Main.Characters:FindFirstChild("Rogue Town")
 		if dungeonPortals then
 			local portalsFolder = dungeonPortals:FindFirstChild("Dungeons")
 			if portalsFolder then
 				local portalPart = portalsFolder:FindFirstChild(selectedDungeon)
 				if portalPart and portalPart:IsA("Part") then
-					-- Teleport to portal
-					humanoidRootPart.CFrame = portalPart.CFrame
-					task.wait(4)
-					
-					-- Set ProximityPrompt duration to 0 and press E ONCE
+					-- Set ProximityPrompt duration to 0
 					local prompt = portalPart:FindFirstChildOfClass("ProximityPrompt")
 					if prompt then
 						prompt.HoldDuration = 0
+					end
+					
+					-- Keep pressing E until player is in dungeon
+					while not isPlayerInDungeon() and Options.AutoJoinToggle and Options.AutoJoinToggle.Value do
+						-- Teleport to portal
+						humanoidRootPart.CFrame = portalPart.CFrame
+						task.wait(0.1)
+						
+						-- Press E
 						pressKey(Enum.KeyCode.E)
-						-- STOPS HERE - Portal will now exist, so next loop won't press E again
+						task.wait(0.2)
 					end
 				end
 			end
