@@ -621,7 +621,7 @@ SaveManager:LoadAutoloadConfig()
 
 -- Delayed Haki activation after load
 task.spawn(function()
-	task.wait(0.2)
+	task.wait(1.2)
 	if Options.HakiToggle and Options.HakiToggle.Value then
 		hakiEnabled = true
 		ensureHaki()
