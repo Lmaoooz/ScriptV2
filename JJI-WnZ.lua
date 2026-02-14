@@ -19,8 +19,7 @@ local Window = Fluent:CreateWindow({
 local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "users" }),
     AutoJoin = Window:AddTab({ Title = "Auto Join", Icon = "layers" }),
-    Mission = Window:AddTab({ Title = "Mission", Icon = "target" }),
-    Webhook = Window:AddTab({ Title = "Webhook", Icon = "globe" }),
+	Webhook = Window:AddTab({ Title = "Webhook", Icon = "globe" }),
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
@@ -31,7 +30,6 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
 
 local CHECK_INTERVAL = 0.5
 local EMPTY_CHECK_TIME = 3
@@ -51,11 +49,9 @@ local autoJoinLobbyEnabled = false
 local autoJoinEnabled = false
 local disableChestAnimation = false
 local rejoinOnKickEnabled = false
-local autoFarmMissionEnabled = false
 local selectedStage = "Cursed School"
 local selectedLevel = 1
 local selectedDifficulty = "Easy"
-local selectedMissionSet = "Yuki Fortress Set"
 local currentMobIndex = 1
 local PingItem = ""
 local WebhookURL = ""
@@ -223,195 +219,6 @@ local function hasModelInMobs()
 	return false
 end
 
--- Mission Functions
-local function setDropsProximityPrompts()
-	for _, drop in pairs(dropsFolder:GetChildren()) do
-		local proximityPrompt = drop:FindFirstChildOfClass("ProximityPrompt", true)
-		if proximityPrompt then
-			proximityPrompt.HoldDuration = 0
-			pcall(function()
-				fireproximityprompt(proximityPrompt)
-			end)
-		end
-	end
-	
-	-- Also press E key
-	VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-	task.wait(0.05)
-	VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-end
-
-local function countStars(questCard)
-	local starsFrame = questCard:FindFirstChild("Back") and questCard.Back:FindFirstChild("Stars")
-	if not starsFrame then return 0 end
-	
-	local count = 0
-	for _, child in pairs(starsFrame:GetChildren()) do
-		if child:IsA("ImageLabel") then
-			count = count + 1
-		end
-	end
-	return count
-end
-
-local function hasCurseText(text)
-	return string.find(string.lower(text), "curse") ~= nil
-end
-
-local function find3StarCurseQuest()
-	local missionsGui = player.PlayerGui:FindFirstChild("Missions")
-	if not missionsGui then return nil end
-	
-	local cards = missionsGui:FindFirstChild("Frame") and missionsGui.Frame:FindFirstChild("Main") and missionsGui.Frame.Main:FindFirstChild("Cards")
-	if not cards then return nil end
-	
-	local questCards = {"QuestCard1", "QuestCard2", "QuestCard3"}
-	
-	for _, cardName in pairs(questCards) do
-		local card = cards:FindFirstChild(cardName)
-		if card then
-			local subtitle = card:FindFirstChild("Back") and card.Back:FindFirstChild("Subtitle")
-			if subtitle and hasCurseText(subtitle.Text) then
-				local stars = countStars(card)
-				if stars == 3 then
-					return cardName:gsub("QuestCard", "Quest")
-				end
-			end
-		end
-	end
-	
-	return nil
-end
-
-local function rerollMissions()
-	local args = {[1] = selectedMissionSet}
-	pcall(function()
-		ReplicatedStorage.Remotes.Server.Data.RerollMissions:InvokeServer(unpack(args))
-	end)
-end
-
-local function claimQuest(questNumber)
-	local missionPath = ReplicatedStorage:FindFirstChild("Missions")
-	if not missionPath then return end
-	
-	local playerMissions = missionPath:FindFirstChild(player.Name)
-	if not playerMissions then return end
-	
-	local missionSet = playerMissions:FindFirstChild(selectedMissionSet)
-	if not missionSet then return end
-	
-	local quest = missionSet:FindFirstChild(questNumber)
-	if not quest then return end
-	
-	local args = {[1] = quest}
-	pcall(function()
-		ReplicatedStorage.Remotes.Server.Data.ClaimQuest:InvokeServer(unpack(args))
-	end)
-end
-
-local function isOnMission()
-	local questInfo = player.PlayerGui:FindFirstChild("StorylineDialogue") and player.PlayerGui.StorylineDialogue:FindFirstChild("Frame") and player.PlayerGui.StorylineDialogue.Frame:FindFirstChild("QuestFrame") and player.PlayerGui.StorylineDialogue.Frame.QuestFrame:FindFirstChild("QuestInfo")
-	return questInfo and questInfo.Visible or false
-end
-
-local function getMeterProgress()
-	local meter = player.PlayerGui:FindFirstChild("Missions") and player.PlayerGui.Missions:FindFirstChild("Frame") and player.PlayerGui.Missions.Frame:FindFirstChild("Main") and player.PlayerGui.Missions.Frame.Main:FindFirstChild("Meter") and player.PlayerGui.Missions.Frame.Main.Meter:FindFirstChild("TextLabel")
-	if meter then
-		return meter.Text
-	end
-	return ""
-end
-
-local function clickWarpButton()
-	local warpButton = player.PlayerGui:FindFirstChild("Main") and player.PlayerGui.Main:FindFirstChild("Frame") and player.PlayerGui.Main.Frame:FindFirstChild("MobileButtons") and player.PlayerGui.Main.Frame.MobileButtons:FindFirstChild("TopLeft") and player.PlayerGui.Main.Frame.MobileButtons.TopLeft:FindFirstChild("Warp")
-	
-	if warpButton then
-		GuiService.SelectedObject = warpButton
-		task.wait(0.05)
-		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
-		task.wait(0.05)
-		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
-	end
-end
-
-local function claimMissionReward()
-	local meterLabel = player.PlayerGui:FindFirstChild("Missions") and player.PlayerGui.Missions:FindFirstChild("Frame") and player.PlayerGui.Missions.Frame:FindFirstChild("Main") and player.PlayerGui.Missions.Frame.Main:FindFirstChild("Meter") and player.PlayerGui.Missions.Frame.Main.Meter:FindFirstChild("TextLabel")
-	
-	if meterLabel and meterLabel.Text == "100%" then
-		GuiService.SelectedObject = meterLabel
-		task.wait(0.05)
-		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
-		task.wait(0.05)
-		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
-	end
-end
-
-local function autoFarmMissionLoop()
-	local wasOnMission = false
-	local waitingForCooldown = false
-	local cooldownStartTime = 0
-	
-	while autoFarmMissionEnabled do
-		task.wait(0.5)
-		
-		-- Auto kill mobs in mission
-		checkAndKillNearbyMobs()
-		
-		-- Set drops proximity prompts
-		setDropsProximityPrompts()
-		
-		local currentlyOnMission = isOnMission()
-		local progress = getMeterProgress()
-		
-		-- If progress is 100%, teleport to claim position
-		if progress == "100%" then
-			character:PivotTo(CFrame.new(Vector3.new(-512.312317, 4470.245117, -15619.548828)))
-			task.wait(0.5)
-			claimMissionReward()
-			task.wait(2)
-			
-			-- Wait until progress is no longer 100%
-			while getMeterProgress() == "100%" do
-				task.wait(0.5)
-			end
-			
-			task.wait(1)
-		end
-		
-		if wasOnMission and not currentlyOnMission then
-			waitingForCooldown = true
-			cooldownStartTime = tick()
-		end
-		
-		if waitingForCooldown then
-			if tick() - cooldownStartTime >= 5 then
-				waitingForCooldown = false
-			else
-				wasOnMission = currentlyOnMission
-				continue
-			end
-		end
-		
-		if not currentlyOnMission then
-			local questNumber = find3StarCurseQuest()
-			if not questNumber then
-				rerollMissions()
-				task.wait(1)
-			else
-				claimQuest(questNumber)
-				task.wait(1)
-				clickWarpButton()
-				task.wait(2)
-			end
-		else
-			clickWarpButton()
-			task.wait(0.5)
-		end
-		
-		wasOnMission = currentlyOnMission
-	end
-end
-
 local function autoFarmLoop()
 	if game.PlaceId == LOBBY_PLACE_ID then
 		return
@@ -504,7 +311,7 @@ local function monitorKickMessages()
 	while rejoinOnKickEnabled do
 		task.wait(1)
 		
-		local promptOverlay = game:GetService("CoreGui"):FindFirstChild("RobloxPromptGui") and game:GetService("CoreGui").RobloxPromptGui:FindFirstChild("promptOverlay")
+		local promptOverlay = game:GetService("CoreGui"):FindFirstChild("RobloxPromptGui"):FindFirstChild("promptOverlay")
 		local errorPrompt = promptOverlay and promptOverlay:FindFirstChild("ErrorPrompt")
 		
 		if errorPrompt and errorPrompt.Visible then
@@ -538,15 +345,22 @@ do
 					Duration = 3
 				})
 			else
-				Fluent:Notify({
-					Title = "Kill Aura",
-					Content = "You might have to wait for 30s for Kill Aura to be working properly.",
-					Duration = 5
-				})
 				task.spawn(autoFarmLoop)
 			end
 		end
 	end)
+
+AutoFarmToggle:OnChanged(function()
+    autoFarmEnabled = Options.AutoFarmToggle.Value
+    
+    if autoFarmEnabled then
+        Fluent:Notify({
+            Title = "Kill Aura",
+            Content = "You might have to wait for 30s for Kill Aura to be working properly.",
+            Duration = 5
+        })
+    end
+end)
 	
 	local AutoJoinLobbyToggle = Tabs.Main:AddToggle("AutoJoinLobbyToggle", {
 		Title = "Auto Join Investigation (Lobby)",
@@ -581,16 +395,16 @@ do
 			task.spawn(monitorKickMessages)
 		end
 	end)
-	
+
 	local DisableChestToggle = Tabs.Main:AddToggle("DisableChestToggle", { 
-		Title = "Disable Chest Animation",
-		Description = "Must Enabled.",
-		Default = true
-	})
-	
-	DisableChestToggle:OnChanged(function()
-		disableChestAnimation = Options.DisableChestToggle.Value
-	end)
+    Title = "Disable Chest Animation",
+	Description = "Must Enabled.",
+    Default = true
+})
+
+DisableChestToggle:OnChanged(function()
+    disableChestAnimation = Options.DisableChestToggle.Value
+end)
 	
 	Tabs.AutoJoin:AddParagraph({
 		Title = "Auto Join Settings",
@@ -650,46 +464,17 @@ do
 			end
 		end
 	end)
-	
-	Tabs.Mission:AddParagraph({
-		Title = "Mission Settings",
-		Content = "Select mission set and auto farm missions."
-	})
-	
-	local MissionSetDropdown = Tabs.Mission:AddDropdown("MissionSetDropdown", {
-		Title = "Select Mission Set",
-		Values = {"Shijo Town Set", "Umi Village Set", "Numa Temple Set", "Kura Camp Set", "Yuki Fortress Set"},
-		Multi = false,
-		Default = 5,
-	})
-	
-	MissionSetDropdown:OnChanged(function(Value)
-		selectedMissionSet = Value
-	end)
-	
-	local AutoFarmMissionToggle = Tabs.Mission:AddToggle("AutoFarmMissionToggle", {
-		Title = "Enable Auto Farm Mission",
-		Description = "Automatically farm 3-star curse missions.",
-		Default = false
-	})
-	
-	AutoFarmMissionToggle:OnChanged(function()
-		autoFarmMissionEnabled = Options.AutoFarmMissionToggle.Value
-		if autoFarmMissionEnabled then
-			task.spawn(autoFarmMissionLoop)
-		end
-	end)
-	
-	Tabs.Webhook:AddInput("WebhookInput", {
-		Title = "Webhook URL",
-		Default = "",
-		Placeholder = "https://discord.com/api/webhooks/...",
-		Callback = function(Value)
-			WebhookURL = Value
-		end
-	})
-	
-	Tabs.Webhook:AddInput("PingInput", {
+
+Tabs.Webhook:AddInput("WebhookInput", {
+    Title = "Webhook URL",
+    Default = "",
+    Placeholder = "https://discord.com/api/webhooks/...",
+    Callback = function(Value)
+        WebhookURL = Value
+    end
+})
+
+Tabs.Webhook:AddInput("PingInput", {
     Title = "Ping When Got",
     Description = "Make sure the item name is correct.",
     Default = "",
@@ -767,9 +552,8 @@ task.spawn(function()
                         tostring(selectedDifficulty or "N/A")
                     )
 
-                    -- CORRECTED TABLE CONSTRUCTOR START
                     local data = {
-                        ["content"] = shouldPing and "@everyone" or "", 
+                        ["content"] = shouldPing and "@everyone" or "", -- Pings if item matches
                         ["embeds"] = {{
                             ["title"] = "Investigation Results",
                             ["color"] = 65280, 
@@ -781,8 +565,7 @@ task.spawn(function()
                             }
                         }}
                     }
-                    -- CORRECTED TABLE CONSTRUCTOR END
-                
+                    
                     pcall(function()
                         (syn and syn.request or http_request or request)({
                             Url = WebhookURL,
