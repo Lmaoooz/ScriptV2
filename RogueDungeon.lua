@@ -49,7 +49,8 @@ local rejoinOnKickEnabled = false
 local selectedWeaponName = ""
 local selectedSkills = {}
 local bossKillThreshold = 80
-local currentTargetRoot = nil
+local currentTarget = nil
+local currentTargetType = nil
 local selectedDungeon = "Anti-Magic"
 local selectedDifficulty = "Normal"
 
@@ -170,29 +171,53 @@ local function getDungeonList()
 	return list
 end
 
--- [TARGET FINDING LOGIC]
+-- [IMPROVED TARGET FINDING LOGIC]
 local function findAliveMob()
-	-- Priority: Boss (any boss in folder, even if HP is unknown)
-	for _, boss in pairs(bossFolder:GetChildren()) do
-		if boss:IsA("Model") then
-			local root = boss:FindFirstChild("HumanoidRootPart") or boss:FindFirstChild("Torso")
-			if root then
-				return boss, root, true
+	local Dungeon = workspace.Main.Characters:FindFirstChild("Dungeon")
+	if not Dungeon then return nil, nil end
+
+	-- PRIORITY 1: Check for BOSS first
+	local BossFolder = Dungeon:FindFirstChild("Boss")
+	if BossFolder then
+		for _, v in ipairs(BossFolder:GetChildren()) do
+			if v:IsA("Model") then
+				local humanoid = v:FindFirstChildOfClass("Humanoid")
+				local root = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso") or v.PrimaryPart
+				
+				-- Check if boss is alive (or humanoid not loaded yet)
+				if root and (not humanoid or humanoid.Health > 0) then
+					return v, "Boss"
+				end
 			end
 		end
 	end
-	
-	-- Secondary: Mob (any existing child)
-	for _, mob in pairs(mobsFolder:GetChildren()) do
-		if mob:IsA("Model") then
-			local root = mob:FindFirstChild("HumanoidRootPart") or mob:FindFirstChild("Torso")
-			if root then
-				return mob, root, false
+
+	-- PRIORITY 2: Check for Mobs (Only if no Boss is found)
+	local MobFolder = Dungeon:FindFirstChild("Mob")
+	if MobFolder then
+		local closest, shortestDist = nil, math.huge
+		
+		if humanoidRootPart and humanoidRootPart.Parent then
+			local lpPos = humanoidRootPart.Position
+			
+			for _, v in ipairs(MobFolder:GetChildren()) do
+				if v:IsA("Model") then
+					local root = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso") or v.PrimaryPart
+					if root then
+						local distance = (lpPos - root.Position).Magnitude
+						if distance < shortestDist then
+							shortestDist = distance
+							closest = v
+						end
+					end
+				end
 			end
 		end
+		
+		return closest, "Mob"
 	end
-	
-	return nil, nil, false
+
+	return nil, nil
 end
 
 -- [KILL LOGIC]
@@ -244,19 +269,44 @@ local function monitorKickMessages()
 	end
 end
 
--- [HEARTBEAT TELEPORT LOOP] - Fixed to always update when target exists
+-- [IMPROVED HEARTBEAT TELEPORT LOOP]
 RunService.Heartbeat:Connect(function()
-	if autoFarmEnabled and currentTargetRoot and currentTargetRoot.Parent and humanoidRootPart and humanoidRootPart.Parent then
-		local behindCFrame = currentTargetRoot.CFrame * CFrame.new(0, 0, 4)
-		humanoidRootPart.CFrame = behindCFrame
+	if not autoFarmEnabled then return end
+	
+	pcall(function()
+		local char = player.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		local hum = char and char:FindFirstChild("Humanoid")
 		
-		if humanoidRootPart.AssemblyLinearVelocity.Magnitude > 0 then
-			humanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+		if not hrp or not hum or hum.Health <= 0 then return end
+
+		if currentTarget and currentTarget.Parent and currentTargetType then
+			local targetRoot = currentTarget:FindFirstChild("HumanoidRootPart") or currentTarget:FindFirstChild("Torso") or currentTarget.PrimaryPart
+			
+			if targetRoot and targetRoot.Parent then
+				if currentTargetType == "Boss" then
+					-- TELEPORT BEHIND BOSS (4 studs back)
+					-- Using CFrame lookVector to stay behind even if boss turns
+					local behindCFrame = targetRoot.CFrame * CFrame.new(0, 0, 4)
+					hrp.CFrame = behindCFrame
+					
+					-- Force look at boss
+					hrp.CFrame = CFrame.lookAt(hrp.Position, targetRoot.Position)
+				else
+					-- Teleport to Mob (Standard - 3 studs back)
+					hrp.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 3)
+				end
+				
+				-- Kill Velocity to prevent falling
+				if hrp.AssemblyLinearVelocity.Magnitude > 0 then
+					hrp.AssemblyLinearVelocity = Vector3.zero
+				end
+			end
 		end
-	end
+	end)
 end)
 
--- [MAIN AUTO FARM LOOP] - Fixed to continuously find targets
+-- [MAIN AUTO FARM LOOP]
 local function autoFarmLoop()
 	equipWeapon()
 	task.wait(0.5)
@@ -267,10 +317,11 @@ local function autoFarmLoop()
 		end
 		
 		-- Always try to find a target
-		local target, root, isBoss = findAliveMob()
+		local target, targetType = findAliveMob()
 		
-		if target and root then
-			currentTargetRoot = root
+		if target and targetType then
+			currentTarget = target
+			currentTargetType = targetType
 			
 			-- Always attack
 			pressMouseButton()
@@ -282,7 +333,8 @@ local function autoFarmLoop()
 				end
 			end
 		else
-			currentTargetRoot = nil
+			currentTarget = nil
+			currentTargetType = nil
 		end
 		
 		-- Kill logic
@@ -292,12 +344,13 @@ local function autoFarmLoop()
 		task.wait(0)
 	end
 	
-	currentTargetRoot = nil
+	currentTarget = nil
+	currentTargetType = nil
 end
 
 -- [CHECK IF PLAYER IS IN DUNGEON]
 local function isPlayerInDungeon()
-	pcall(function()
+	local success = pcall(function()
 		local dungeonPortals = workspace.Main.Characters:FindFirstChild("Rogue Town")
 		if dungeonPortals then
 			local portalsFolder = dungeonPortals:FindFirstChild("Dungeons")
@@ -511,7 +564,8 @@ do
 				task.spawn(autoFarmLoop)
 			end
 		else
-			currentTargetRoot = nil
+			currentTarget = nil
+			currentTargetType = nil
 		end
 	end)
 	
