@@ -171,21 +171,20 @@ local function getDungeonList()
 	return list
 end
 
--- [IMPROVED TARGET FINDING LOGIC]
+-- [SIMPLIFIED TARGET FINDING - ALWAYS ATTACK IF MODEL EXISTS]
 local function findAliveMob()
 	local Dungeon = workspace.Main.Characters:FindFirstChild("Dungeon")
 	if not Dungeon then return nil, nil end
 
-	-- PRIORITY 1: Check for BOSS first
+	-- PRIORITY 1: Check for ANY Boss Model (no health checks)
 	local BossFolder = Dungeon:FindFirstChild("Boss")
 	if BossFolder then
 		for _, v in ipairs(BossFolder:GetChildren()) do
 			if v:IsA("Model") then
-				local humanoid = v:FindFirstChildOfClass("Humanoid")
 				local root = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso") or v.PrimaryPart
 				
-				-- Check if boss is alive (or humanoid not loaded yet)
-				if root and (not humanoid or humanoid.Health > 0) then
+				-- Just check if root exists, ignore health completely
+				if root then
 					return v, "Boss"
 				end
 			end
@@ -239,7 +238,6 @@ local function checkAndKillBosses()
 		if boss:IsA("Model") then
 			local hum = boss:FindFirstChildOfClass("Humanoid")
 			if hum then
-				-- Convert to numbers explicitly to avoid string comparison errors
 				local current = tonumber(hum.Health)
 				local max = tonumber(hum.MaxHealth)
 				
@@ -274,7 +272,7 @@ local function monitorKickMessages()
 	end
 end
 
--- [IMPROVED HEARTBEAT TELEPORT LOOP]
+-- [HEARTBEAT TELEPORT LOOP - INCREASED DISTANCE]
 RunService.Heartbeat:Connect(function()
 	if not autoFarmEnabled then return end
 	
@@ -290,8 +288,8 @@ RunService.Heartbeat:Connect(function()
 			
 			if targetRoot and targetRoot.Parent then
 				if currentTargetType == "Boss" then
-					-- TELEPORT BEHIND BOSS (4 studs back)
-					local behindCFrame = targetRoot.CFrame * CFrame.new(0, 0, 4)
+					-- TELEPORT BEHIND BOSS (8 studs back - increased from 4)
+					local behindCFrame = targetRoot.CFrame * CFrame.new(0, 0, 8)
 					hrp.CFrame = behindCFrame
 					
 					-- Force look at boss
@@ -310,40 +308,42 @@ RunService.Heartbeat:Connect(function()
 	end)
 end)
 
--- [MAIN AUTO FARM LOOP]
+-- [MAIN AUTO FARM LOOP - ALWAYS ATTACK]
 local function autoFarmLoop()
 	equipWeapon()
 	task.wait(0.5)
 	
 	while autoFarmEnabled do
-		if not isWeaponEquipped() then
-			equipWeapon()
-		end
-		
-		-- Always try to find a target
-		local target, targetType = findAliveMob()
-		
-		if target and targetType then
-			currentTarget = target
-			currentTargetType = targetType
-			
-			-- Always attack
-			pressMouseButton()
-			
-			-- Always use skills
-			for skillKey, enabled in pairs(selectedSkills) do
-				if enabled then
-					useKeySkill(skillKey)
-				end
+		pcall(function()
+			if not isWeaponEquipped() then
+				equipWeapon()
 			end
-		else
-			currentTarget = nil
-			currentTargetType = nil
-		end
-		
-		-- Kill logic
-		killRegularMobs()
-		checkAndKillBosses()
+			
+			-- Always try to find a target
+			local target, targetType = findAliveMob()
+			
+			if target and targetType then
+				currentTarget = target
+				currentTargetType = targetType
+				
+				-- ALWAYS attack when boss exists
+				pressMouseButton()
+				
+				-- ALWAYS use skills when boss exists
+				for skillKey, enabled in pairs(selectedSkills) do
+					if enabled then
+						useKeySkill(skillKey)
+					end
+				end
+			else
+				currentTarget = nil
+				currentTargetType = nil
+			end
+			
+			-- Kill logic
+			killRegularMobs()
+			checkAndKillBosses()
+		end)
 		
 		task.wait(0)
 	end
@@ -352,7 +352,7 @@ local function autoFarmLoop()
 	currentTargetType = nil
 end
 
--- [CHECK IF PLAYER IS IN DUNGEON - NEW METHOD]
+-- [CHECK IF PLAYER IS IN DUNGEON]
 local function isPlayerInDungeon()
 	local success, result = pcall(function()
 		local dungeonPortals = workspace.Main.Characters:FindFirstChild("Rogue Town")
@@ -365,7 +365,6 @@ local function isPlayerInDungeon()
 					if matchFolder then
 						local frame = matchFolder:FindFirstChild("Frame")
 						if frame then
-							-- Check if there's a TextLabel NAMED with the player's username
 							local playerLabel = frame:FindFirstChild(player.Name)
 							if playerLabel and playerLabel:IsA("TextLabel") then
 								return true
@@ -381,26 +380,22 @@ local function isPlayerInDungeon()
 	return success and result
 end
 
--- [AUTO JOIN LOBBY LOGIC - ONLY IN LOBBY]
+-- [AUTO JOIN LOBBY LOGIC]
 local function autoJoinDungeon()
 	if game.PlaceId ~= LOBBY_ID then return end
 	if not Options.AutoJoinToggle or not Options.AutoJoinToggle.Value then return end
 	
 	pcall(function()
-		-- Check if already in dungeon
 		if isPlayerInDungeon() then
 			return
 		end
 		
-		-- Portal doesn't exist or player not in it, proceed with joining
 		local dungeonSpawn = player.PlayerGui.Button:FindFirstChild("Dungeon Spawn")
 		if not dungeonSpawn then return end
 		
-		-- Make GUI visible
 		dungeonSpawn.Visible = true
 		task.wait(0.5)
 		
-		-- Select dungeon by clicking its frame
 		local dungeonFrame = dungeonSpawn.Dungeon.Frame:FindFirstChild(selectedDungeon)
 		if dungeonFrame then
 			GuiService.SelectedObject = dungeonFrame
@@ -409,7 +404,6 @@ local function autoJoinDungeon()
 			task.wait(0.5)
 		end
 		
-		-- Click Spawn button
 		local spawnButton = dungeonSpawn.Dungeon:FindFirstChild("Spawn")
 		if spawnButton then
 			GuiService.SelectedObject = spawnButton
@@ -418,26 +412,20 @@ local function autoJoinDungeon()
 			task.wait(1)
 		end
 		
-		-- Find portal and keep pressing E until player username appears in frame
 		local dungeonPortals = workspace.Main.Characters:FindFirstChild("Rogue Town")
 		if dungeonPortals then
 			local portalsFolder = dungeonPortals:FindFirstChild("Dungeons")
 			if portalsFolder then
 				local portalPart = portalsFolder:FindFirstChild(selectedDungeon)
 				if portalPart and portalPart:IsA("Part") then
-					-- Set ProximityPrompt duration to 0
 					local prompt = portalPart:FindFirstChildOfClass("ProximityPrompt")
 					if prompt then
 						prompt.HoldDuration = 0
 					end
 					
-					-- Keep pressing E until TextLabel with player's name appears
 					while not isPlayerInDungeon() and Options.AutoJoinToggle and Options.AutoJoinToggle.Value do
-						-- Teleport to portal
 						humanoidRootPart.CFrame = portalPart.CFrame
 						task.wait(0.1)
-						
-						-- Press E
 						pressKey(Enum.KeyCode.E)
 						task.wait(0.2)
 					end
@@ -447,7 +435,6 @@ local function autoJoinDungeon()
 	end)
 end
 
--- Auto Join Trigger - Only runs when toggle is enabled
 task.spawn(function()
 	while task.wait(3) do
 		if game.PlaceId == LOBBY_ID and Options.AutoJoinToggle and Options.AutoJoinToggle.Value then
@@ -456,14 +443,13 @@ task.spawn(function()
 	end
 end)
 
--- [IN-DUNGEON AUTO DIFFICULTY/START/RESTART - NOT IN LOBBY]
+-- [IN-DUNGEON AUTO DIFFICULTY/START/RESTART]
 task.spawn(function()
 	while task.wait(1) do
 		if game.PlaceId ~= LOBBY_ID then
 			local dungeonGui = player.PlayerGui:FindFirstChild("Dungeon")
 			if not dungeonGui then continue end
 			
-			-- Auto Difficulty Selection
 			if Options.AutoJoinToggle and Options.AutoJoinToggle.Value then
 				local difficultyFrame = dungeonGui:FindFirstChild("Difficulty")
 				if difficultyFrame and difficultyFrame.Visible then
@@ -477,7 +463,6 @@ task.spawn(function()
 				end
 			end
 			
-			-- Auto Start
 			if Options.AutoStartToggle and Options.AutoStartToggle.Value then
 				local startFrame = dungeonGui:FindFirstChild("Start")
 				if startFrame and startFrame.Visible then
@@ -488,7 +473,6 @@ task.spawn(function()
 				end
 			end
 			
-			-- Auto Restart
 			if Options.AutoRestartToggle and Options.AutoRestartToggle.Value then
 				local restartFrame = dungeonGui:FindFirstChild("Restart")
 				if restartFrame and restartFrame.Visible then
@@ -682,7 +666,6 @@ SaveManager:BuildConfigSection(Tabs.Settings)
 Window:SelectTab(1)
 SaveManager:LoadAutoloadConfig()
 
--- Delayed Haki activation after load
 task.spawn(function()
 	task.wait(1.2)
 	if Options.HakiToggle and Options.HakiToggle.Value then
