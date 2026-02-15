@@ -48,7 +48,7 @@ local hakiEnabled = false
 local rejoinOnKickEnabled = false
 local selectedWeaponName = ""
 local selectedSkills = {}
-local bossKillThreshold = 80
+local bossKillThreshold = 50
 local currentTarget = nil
 local currentTargetType = nil
 local selectedDungeon = "Anti-Magic"
@@ -238,15 +238,20 @@ local function checkAndKillBosses()
 	for _, boss in pairs(bossFolder:GetChildren()) do
 		if boss:IsA("Model") then
 			local hum = boss:FindFirstChildOfClass("Humanoid")
-			if hum and hum.Health > 0 and hum.MaxHealth > 0 then
-				local current = hum.Health
-				local max = hum.MaxHealth
-				local percentRemaining = (current / max) * 100
+			if hum then
+				-- Convert to numbers explicitly to avoid string comparison errors
+				local current = tonumber(hum.Health)
+				local max = tonumber(hum.MaxHealth)
 				
-				if percentRemaining <= bossKillThreshold then
-					pcall(function()
-						hum.Health = 0
-					end)
+				if current and max and current > 0 and max > 0 then
+					local percentRemaining = (current / max) * 100
+					local threshold = tonumber(bossKillThreshold) or 50
+					
+					if percentRemaining <= threshold then
+						pcall(function()
+							hum.Health = 0
+						end)
+					end
 				end
 			end
 		end
@@ -286,7 +291,6 @@ RunService.Heartbeat:Connect(function()
 			if targetRoot and targetRoot.Parent then
 				if currentTargetType == "Boss" then
 					-- TELEPORT BEHIND BOSS (4 studs back)
-					-- Using CFrame lookVector to stay behind even if boss turns
 					local behindCFrame = targetRoot.CFrame * CFrame.new(0, 0, 4)
 					hrp.CFrame = behindCFrame
 					
