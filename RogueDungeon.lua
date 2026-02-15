@@ -348,19 +348,22 @@ local function autoFarmLoop()
 	currentTargetType = nil
 end
 
--- [CHECK IF PLAYER IS IN DUNGEON]
+-- [CHECK IF PLAYER IS IN DUNGEON - NEW METHOD]
 local function isPlayerInDungeon()
-	local success = pcall(function()
+	local success, result = pcall(function()
 		local dungeonPortals = workspace.Main.Characters:FindFirstChild("Rogue Town")
 		if dungeonPortals then
 			local portalsFolder = dungeonPortals:FindFirstChild("Dungeons")
 			if portalsFolder then
-				local portalPart = portalsFolder:FindFirstChild(selectedDungeon)
-				if portalPart and portalPart:IsA("Part") then
-					local playersFolder = portalPart:FindFirstChild("Players")
-					if playersFolder then
-						for _, stringValue in pairs(playersFolder:GetChildren()) do
-							if stringValue:IsA("StringValue") and stringValue.Value == player.Name then
+				local dungeonPart = portalsFolder:FindFirstChild(selectedDungeon)
+				if dungeonPart then
+					local matchFolder = dungeonPart:FindFirstChild("Match")
+					if matchFolder then
+						local frame = matchFolder:FindFirstChild("Frame")
+						if frame then
+							-- Check if there's a TextLabel NAMED with the player's username
+							local playerLabel = frame:FindFirstChild(player.Name)
+							if playerLabel and playerLabel:IsA("TextLabel") then
 								return true
 							end
 						end
@@ -368,8 +371,10 @@ local function isPlayerInDungeon()
 				end
 			end
 		end
+		return false
 	end)
-	return false
+	
+	return success and result
 end
 
 -- [AUTO JOIN LOBBY LOGIC - ONLY IN LOBBY]
@@ -409,7 +414,7 @@ local function autoJoinDungeon()
 			task.wait(1)
 		end
 		
-		-- Find portal and keep pressing E until player is in dungeon
+		-- Find portal and keep pressing E until player username appears in frame
 		local dungeonPortals = workspace.Main.Characters:FindFirstChild("Rogue Town")
 		if dungeonPortals then
 			local portalsFolder = dungeonPortals:FindFirstChild("Dungeons")
@@ -422,7 +427,7 @@ local function autoJoinDungeon()
 						prompt.HoldDuration = 0
 					end
 					
-					-- Keep pressing E until player is in dungeon
+					-- Keep pressing E until TextLabel with player's name appears
 					while not isPlayerInDungeon() and Options.AutoJoinToggle and Options.AutoJoinToggle.Value do
 						-- Teleport to portal
 						humanoidRootPart.CFrame = portalPart.CFrame
