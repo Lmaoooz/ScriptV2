@@ -46,6 +46,8 @@ local charactersFolder = workspace:WaitForChild("Main"):WaitForChild("Characters
 local autoFarmEnabled = false
 local hakiEnabled = false
 local rejoinOnKickEnabled = false
+local autoDodgeUltimate = false
+local isDodgingUltimate = false
 local selectedWeaponName = ""
 local selectedSkills = {}
 local bossKillThreshold = 50
@@ -171,7 +173,22 @@ local function getDungeonList()
 	return list
 end
 
--- [SIMPLIFIED TARGET FINDING - ALWAYS ATTACK IF MODEL EXISTS]
+-- [CHECK IF BOSS HAS ULTIMATE (HL HIGHLIGHT)]
+local function isBossUsingUltimate()
+	if not autoDodgeUltimate then return false end
+	
+	for _, boss in pairs(bossFolder:GetChildren()) do
+		if boss:IsA("Model") then
+			local hlHighlight = boss:FindFirstChild("HL")
+			if hlHighlight and hlHighlight:IsA("Highlight") then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- [SIMPLIFIED TARGET FINDING]
 local function findAliveMob()
 	local Dungeon = workspace.Main.Characters:FindFirstChild("Dungeon")
 	if not Dungeon then return nil, nil end
@@ -183,7 +200,6 @@ local function findAliveMob()
 			if v:IsA("Model") then
 				local root = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso") or v.PrimaryPart
 				
-				-- Just check if root exists, ignore health completely
 				if root then
 					return v, "Boss"
 				end
@@ -272,9 +288,40 @@ local function monitorKickMessages()
 	end
 end
 
--- [HEARTBEAT TELEPORT LOOP - INCREASED DISTANCE]
+-- [ULTIMATE DODGE MONITOR]
+task.spawn(function()
+	while task.wait(0.1) do
+		if autoFarmEnabled and autoDodgeUltimate then
+			local bossUsingUlt = isBossUsingUltimate()
+			
+			if bossUsingUlt and not isDodgingUltimate then
+				-- Boss started ultimate, teleport away
+				isDodgingUltimate = true
+				
+				pcall(function()
+					if humanoidRootPart and humanoidRootPart.Parent and currentTarget then
+						local bossRoot = currentTarget:FindFirstChild("HumanoidRootPart") or currentTarget:FindFirstChild("Torso") or currentTarget.PrimaryPart
+						if bossRoot then
+							-- Teleport 300 studs away from boss
+							local awayPosition = bossRoot.CFrame * CFrame.new(0, 50, 300)
+							humanoidRootPart.CFrame = awayPosition
+						end
+					end
+				end)
+			elseif not bossUsingUlt and isDodgingUltimate then
+				-- Ultimate finished, resume fighting
+				isDodgingUltimate = false
+			end
+		else
+			isDodgingUltimate = false
+		end
+	end
+end)
+
+-- [HEARTBEAT TELEPORT LOOP]
 RunService.Heartbeat:Connect(function()
 	if not autoFarmEnabled then return end
+	if isDodgingUltimate then return end -- Don't teleport to boss during dodge
 	
 	pcall(function()
 		local char = player.Character
@@ -288,7 +335,7 @@ RunService.Heartbeat:Connect(function()
 			
 			if targetRoot and targetRoot.Parent then
 				if currentTargetType == "Boss" then
-					-- TELEPORT BEHIND BOSS (8 studs back - increased from 4)
+					-- TELEPORT BEHIND BOSS (8 studs back)
 					local behindCFrame = targetRoot.CFrame * CFrame.new(0, 0, 8)
 					hrp.CFrame = behindCFrame
 					
@@ -308,7 +355,7 @@ RunService.Heartbeat:Connect(function()
 	end)
 end)
 
--- [MAIN AUTO FARM LOOP - ALWAYS ATTACK]
+-- [MAIN AUTO FARM LOOP]
 local function autoFarmLoop()
 	equipWeapon()
 	task.wait(0.5)
@@ -319,30 +366,33 @@ local function autoFarmLoop()
 				equipWeapon()
 			end
 			
-			-- Always try to find a target
-			local target, targetType = findAliveMob()
-			
-			if target and targetType then
-				currentTarget = target
-				currentTargetType = targetType
+			-- Don't attack during ultimate dodge
+			if not isDodgingUltimate then
+				-- Always try to find a target
+				local target, targetType = findAliveMob()
 				
-				-- ALWAYS attack when boss exists
-				pressMouseButton()
-				
-				-- ALWAYS use skills when boss exists
-				for skillKey, enabled in pairs(selectedSkills) do
-					if enabled then
-						useKeySkill(skillKey)
+				if target and targetType then
+					currentTarget = target
+					currentTargetType = targetType
+					
+					-- ALWAYS attack when boss exists
+					pressMouseButton()
+					
+					-- ALWAYS use skills when boss exists
+					for skillKey, enabled in pairs(selectedSkills) do
+						if enabled then
+							useKeySkill(skillKey)
+						end
 					end
+				else
+					currentTarget = nil
+					currentTargetType = nil
 				end
-			else
-				currentTarget = nil
-				currentTargetType = nil
+				
+				-- Kill logic
+				killRegularMobs()
+				checkAndKillBosses()
 			end
-			
-			-- Kill logic
-			killRegularMobs()
-			checkAndKillBosses()
 		end)
 		
 		task.wait(0)
@@ -559,6 +609,20 @@ do
 		else
 			currentTarget = nil
 			currentTargetType = nil
+			isDodgingUltimate = false
+		end
+	end)
+	
+	local AutoDodgeToggle = Tabs.Main:AddToggle("AutoDodgeToggle", {
+		Title = "Auto Dodge Boss Ultimate",
+		Description = "Automatically dodge when boss uses ultimate (HL appears)",
+		Default = false
+	})
+	
+	AutoDodgeToggle:OnChanged(function()
+		autoDodgeUltimate = Options.AutoDodgeToggle.Value
+		if not autoDodgeUltimate then
+			isDodgingUltimate = false
 		end
 	end)
 	
