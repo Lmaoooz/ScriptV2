@@ -769,3 +769,4 @@ task.spawn(function()
 		hakiEnabled = true
 		ensureHaki()
 		end
+	end)
