@@ -52,6 +52,7 @@ local isDodgingUltimate = false
 local selectedWeaponName = ""
 local selectedSkills = {}
 local bossKillThreshold = 50
+local mobsDistance = 8 -- Default distance for both mobs and boss
 local currentTarget = nil
 local currentTargetType = nil
 local selectedDungeon = "Anti-Magic"
@@ -189,12 +190,12 @@ local function isBossUsingUltimate()
 	return false
 end
 
--- [SIMPLIFIED TARGET FINDING]
+-- [TARGET FINDING - Fixed mob alive check for fast switching]
 local function findAliveMob()
 	local Dungeon = workspace.Main.Characters:FindFirstChild("Dungeon")
 	if not Dungeon then return nil, nil end
 
-	-- PRIORITY 1: Check for ANY Boss Model (no health checks)
+	-- PRIORITY 1: Boss - no health check, just needs model
 	local BossFolder = Dungeon:FindFirstChild("Boss")
 	if BossFolder then
 		for _, v in ipairs(BossFolder:GetChildren()) do
@@ -207,7 +208,7 @@ local function findAliveMob()
 		end
 	end
 
-	-- PRIORITY 2: Check for Mobs (Only if no Boss is found)
+	-- PRIORITY 2: Mobs - MUST check alive status for fast switching
 	local MobFolder = Dungeon:FindFirstChild("Mob")
 	if MobFolder then
 		local closest, shortestDist = nil, math.huge
@@ -217,8 +218,11 @@ local function findAliveMob()
 			
 			for _, v in ipairs(MobFolder:GetChildren()) do
 				if v:IsA("Model") then
+					local hum = v:FindFirstChildOfClass("Humanoid")
 					local root = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso") or v.PrimaryPart
-					if root then
+					
+					-- Only target mobs that are ALIVE (health > 0)
+					if root and hum and hum.Health > 0 then
 						local distance = (lpPos - root.Position).Magnitude
 						if distance < shortestDist then
 							shortestDist = distance
@@ -292,11 +296,8 @@ end
 task.spawn(function()
 	while task.wait(2) do
 		if not autoLeaveWithPlayer then continue end
-		
-		-- Only check when in dungeon (not lobby)
 		if game.PlaceId == LOBBY_ID then continue end
 		
-		-- Count other players in server (exclude self)
 		local otherPlayers = 0
 		for _, p in pairs(Players:GetPlayers()) do
 			if p ~= player then
@@ -304,7 +305,6 @@ task.spawn(function()
 			end
 		end
 		
-		-- If there's any other player, leave to lobby
 		if otherPlayers > 0 then
 			Fluent:Notify({
 				Title = "Auto Leave",
@@ -321,7 +321,7 @@ end)
 
 -- [ULTIMATE DODGE MONITOR]
 task.spawn(function()
-	while task.wait(0.1) do
+	while task.wait(0.05) do
 		if autoFarmEnabled and autoDodgeUltimate then
 			local bossUsingUlt = isBossUsingUltimate()
 			
@@ -346,7 +346,7 @@ task.spawn(function()
 	end
 end)
 
--- [HEARTBEAT TELEPORT LOOP]
+-- [HEARTBEAT TELEPORT LOOP - Uses mobsDistance for both boss and mob]
 RunService.Heartbeat:Connect(function()
 	if not autoFarmEnabled then return end
 	if isDodgingUltimate then return end
@@ -358,22 +358,33 @@ RunService.Heartbeat:Connect(function()
 		
 		if not hrp or not hum or hum.Health <= 0 then return end
 
-		if currentTarget and currentTarget.Parent and currentTargetType then
-			local targetRoot = currentTarget:FindFirstChild("HumanoidRootPart") or currentTarget:FindFirstChild("Torso") or currentTarget.PrimaryPart
+		-- Always re-find target every heartbeat for instant switching
+		local target, targetType = findAliveMob()
+		
+		if target and target.Parent and targetType then
+			currentTarget = target
+			currentTargetType = targetType
+			
+			local targetRoot = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Torso") or target.PrimaryPart
 			
 			if targetRoot and targetRoot.Parent then
-				if currentTargetType == "Boss" then
-					local behindCFrame = targetRoot.CFrame * CFrame.new(0, 0, 8)
+				if targetType == "Boss" then
+					-- Use mobsDistance for boss too
+					local behindCFrame = targetRoot.CFrame * CFrame.new(0, 0, mobsDistance)
 					hrp.CFrame = behindCFrame
 					hrp.CFrame = CFrame.lookAt(hrp.Position, targetRoot.Position)
 				else
-					hrp.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 3)
+					-- Use mobsDistance for mobs too
+					hrp.CFrame = targetRoot.CFrame * CFrame.new(0, 0, mobsDistance)
 				end
 				
 				if hrp.AssemblyLinearVelocity.Magnitude > 0 then
 					hrp.AssemblyLinearVelocity = Vector3.zero
 				end
 			end
+		else
+			currentTarget = nil
+			currentTargetType = nil
 		end
 	end)
 end)
@@ -390,6 +401,7 @@ local function autoFarmLoop()
 			end
 			
 			if not isDodgingUltimate then
+				-- Re-find target every loop for fast switching
 				local target, targetType = findAliveMob()
 				
 				if target and targetType then
@@ -658,6 +670,27 @@ do
 			})
 		end
 	end)
+
+	Tabs.Main:AddParagraph({
+		Title = "Farm Settings",
+		Content = "Configure farming distance and behavior."
+	})
+
+	local DistanceSlider = Tabs.Main:AddSlider("MobsDistanceSlider", {
+		Title = "Mobs Distance",
+		Description = "Distance between you and mobs/boss (Default: 8)",
+		Default = 8,
+		Min = 1,
+		Max = 30,
+		Rounding = 1,
+		Callback = function(Value)
+			mobsDistance = Value
+		end
+	})
+
+	DistanceSlider:OnChanged(function(Value)
+		mobsDistance = Value
+	end)
 	
 	Tabs.Main:AddParagraph({
 		Title = "Boss Settings",
@@ -768,5 +801,7 @@ task.spawn(function()
 	if Options.HakiToggle and Options.HakiToggle.Value then
 		hakiEnabled = true
 		ensureHaki()
-		end
-	end)
+	end
+end)
+
+-- Pat1
