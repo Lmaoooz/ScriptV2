@@ -47,6 +47,7 @@ local autoFarmEnabled = false
 local hakiEnabled = false
 local rejoinOnKickEnabled = false
 local autoDodgeUltimate = false
+local autoLeaveWithPlayer = false
 local isDodgingUltimate = false
 local selectedWeaponName = ""
 local selectedSkills = {}
@@ -199,7 +200,6 @@ local function findAliveMob()
 		for _, v in ipairs(BossFolder:GetChildren()) do
 			if v:IsA("Model") then
 				local root = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso") or v.PrimaryPart
-				
 				if root then
 					return v, "Boss"
 				end
@@ -288,6 +288,37 @@ local function monitorKickMessages()
 	end
 end
 
+-- [AUTO LEAVE WHEN PLAYER IN DUNGEON]
+task.spawn(function()
+	while task.wait(2) do
+		if not autoLeaveWithPlayer then continue end
+		
+		-- Only check when in dungeon (not lobby)
+		if game.PlaceId == LOBBY_ID then continue end
+		
+		-- Count other players in server (exclude self)
+		local otherPlayers = 0
+		for _, p in pairs(Players:GetPlayers()) do
+			if p ~= player then
+				otherPlayers = otherPlayers + 1
+			end
+		end
+		
+		-- If there's any other player, leave to lobby
+		if otherPlayers > 0 then
+			Fluent:Notify({
+				Title = "Auto Leave",
+				Content = "Player detected! Leaving to lobby...",
+				Duration = 3
+			})
+			task.wait(1)
+			pcall(function()
+				TeleportService:Teleport(LOBBY_ID, player)
+			end)
+		end
+	end
+end)
+
 -- [ULTIMATE DODGE MONITOR]
 task.spawn(function()
 	while task.wait(0.1) do
@@ -295,21 +326,18 @@ task.spawn(function()
 			local bossUsingUlt = isBossUsingUltimate()
 			
 			if bossUsingUlt and not isDodgingUltimate then
-				-- Boss started ultimate, teleport away
 				isDodgingUltimate = true
 				
 				pcall(function()
 					if humanoidRootPart and humanoidRootPart.Parent and currentTarget then
 						local bossRoot = currentTarget:FindFirstChild("HumanoidRootPart") or currentTarget:FindFirstChild("Torso") or currentTarget.PrimaryPart
 						if bossRoot then
-							-- Teleport 300 studs away from boss
 							local awayPosition = bossRoot.CFrame * CFrame.new(0, 50, 300)
 							humanoidRootPart.CFrame = awayPosition
 						end
 					end
 				end)
 			elseif not bossUsingUlt and isDodgingUltimate then
-				-- Ultimate finished, resume fighting
 				isDodgingUltimate = false
 			end
 		else
@@ -321,7 +349,7 @@ end)
 -- [HEARTBEAT TELEPORT LOOP]
 RunService.Heartbeat:Connect(function()
 	if not autoFarmEnabled then return end
-	if isDodgingUltimate then return end -- Don't teleport to boss during dodge
+	if isDodgingUltimate then return end
 	
 	pcall(function()
 		local char = player.Character
@@ -335,18 +363,13 @@ RunService.Heartbeat:Connect(function()
 			
 			if targetRoot and targetRoot.Parent then
 				if currentTargetType == "Boss" then
-					-- TELEPORT BEHIND BOSS (8 studs back)
 					local behindCFrame = targetRoot.CFrame * CFrame.new(0, 0, 8)
 					hrp.CFrame = behindCFrame
-					
-					-- Force look at boss
 					hrp.CFrame = CFrame.lookAt(hrp.Position, targetRoot.Position)
 				else
-					-- Teleport to Mob (Standard - 3 studs back)
 					hrp.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 3)
 				end
 				
-				-- Kill Velocity to prevent falling
 				if hrp.AssemblyLinearVelocity.Magnitude > 0 then
 					hrp.AssemblyLinearVelocity = Vector3.zero
 				end
@@ -366,19 +389,15 @@ local function autoFarmLoop()
 				equipWeapon()
 			end
 			
-			-- Don't attack during ultimate dodge
 			if not isDodgingUltimate then
-				-- Always try to find a target
 				local target, targetType = findAliveMob()
 				
 				if target and targetType then
 					currentTarget = target
 					currentTargetType = targetType
 					
-					-- ALWAYS attack when boss exists
 					pressMouseButton()
 					
-					-- ALWAYS use skills when boss exists
 					for skillKey, enabled in pairs(selectedSkills) do
 						if enabled then
 							useKeySkill(skillKey)
@@ -389,7 +408,6 @@ local function autoFarmLoop()
 					currentTargetType = nil
 				end
 				
-				-- Kill logic
 				killRegularMobs()
 				checkAndKillBosses()
 			end
@@ -436,9 +454,7 @@ local function autoJoinDungeon()
 	if not Options.AutoJoinToggle or not Options.AutoJoinToggle.Value then return end
 	
 	pcall(function()
-		if isPlayerInDungeon() then
-			return
-		end
+		if isPlayerInDungeon() then return end
 		
 		local dungeonSpawn = player.PlayerGui.Button:FindFirstChild("Dungeon Spawn")
 		if not dungeonSpawn then return end
@@ -615,7 +631,7 @@ do
 	
 	local AutoDodgeToggle = Tabs.Main:AddToggle("AutoDodgeToggle", {
 		Title = "Auto Dodge Boss Ultimate",
-		Description = "Automatically dodge when boss uses ultimate (HL appears)",
+		Description = "Dodge when boss HL Highlight appears",
 		Default = false
 	})
 	
@@ -623,6 +639,23 @@ do
 		autoDodgeUltimate = Options.AutoDodgeToggle.Value
 		if not autoDodgeUltimate then
 			isDodgingUltimate = false
+		end
+	end)
+
+	local AutoLeaveToggle = Tabs.Main:AddToggle("AutoLeaveToggle", {
+		Title = "Auto Leave When Have Player",
+		Description = "Leave dungeon if another player detected (solo only)",
+		Default = false
+	})
+
+	AutoLeaveToggle:OnChanged(function()
+		autoLeaveWithPlayer = Options.AutoLeaveToggle.Value
+		if autoLeaveWithPlayer then
+			Fluent:Notify({
+				Title = "Auto Leave",
+				Content = "Will leave if another player joins your dungeon!",
+				Duration = 3
+			})
 		end
 	end)
 	
@@ -735,5 +768,4 @@ task.spawn(function()
 	if Options.HakiToggle and Options.HakiToggle.Value then
 		hakiEnabled = true
 		ensureHaki()
-	end
-end)
+		end
