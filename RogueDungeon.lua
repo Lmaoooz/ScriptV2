@@ -520,42 +520,45 @@ task.spawn(function()
 	end
 end)
 
+-- [RELIABLE GUI BUTTON CLICK HELPER]
+-- Tries multiple methods so it always fires even if one approach fails
+local function clickGuiButton(button)
+	if not button then return end
+	pcall(function() firesignal(button.MouseButton1Click) end)
+	pcall(function() firesignal(button.Activated) end)
+	pcall(function() button:Activate() end)
+end
+
 -- [IN-DUNGEON AUTO DIFFICULTY/START/RESTART]
 task.spawn(function()
 	while task.wait(1) do
 		if game.PlaceId ~= LOBBY_ID then
 			local dungeonGui = player.PlayerGui:FindFirstChild("Dungeon")
 			if not dungeonGui then continue end
-			
+
 			if Options.AutoJoinToggle and Options.AutoJoinToggle.Value then
 				local difficultyFrame = dungeonGui:FindFirstChild("Difficulty")
 				if difficultyFrame and difficultyFrame.Visible then
 					local difficultyOption = difficultyFrame:FindFirstChild(selectedDifficulty)
 					if difficultyOption and difficultyOption.Visible then
-						GuiService.SelectedObject = difficultyOption
-						task.wait(0.1)
-						pressKey(Enum.KeyCode.Return)
+						clickGuiButton(difficultyOption)
 						task.wait(0.5)
 					end
 				end
 			end
-			
+
 			if Options.AutoStartToggle and Options.AutoStartToggle.Value then
 				local startFrame = dungeonGui:FindFirstChild("Start")
 				if startFrame and startFrame.Visible then
-					GuiService.SelectedObject = startFrame
-					task.wait(0.1)
-					pressKey(Enum.KeyCode.Return)
+					clickGuiButton(startFrame)
 					task.wait(0.5)
 				end
 			end
-			
+
 			if Options.AutoRestartToggle and Options.AutoRestartToggle.Value then
 				local restartFrame = dungeonGui:FindFirstChild("Restart")
 				if restartFrame and restartFrame.Visible then
-					GuiService.SelectedObject = restartFrame
-					task.wait(0.1)
-					pressKey(Enum.KeyCode.Return)
+					clickGuiButton(restartFrame)
 					task.wait(0.5)
 				end
 			end
