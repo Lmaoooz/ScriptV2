@@ -190,12 +190,12 @@ local function isBossUsingUltimate()
 	return false
 end
 
--- [TARGET FINDING - Fixed mob alive check for fast switching]
+-- [TARGET FINDING - Keep attacking mobs as long as their model exists in Mob folder]
 local function findAliveMob()
 	local Dungeon = workspace.Main.Characters:FindFirstChild("Dungeon")
 	if not Dungeon then return nil, nil end
 
-	-- PRIORITY 1: Boss - no health check, just needs model
+	-- PRIORITY 1: Boss
 	local BossFolder = Dungeon:FindFirstChild("Boss")
 	if BossFolder then
 		for _, v in ipairs(BossFolder:GetChildren()) do
@@ -208,21 +208,20 @@ local function findAliveMob()
 		end
 	end
 
-	-- PRIORITY 2: Mobs - MUST check alive status for fast switching
+	-- PRIORITY 2: Mobs - target ANY model still in the folder, NO health check
 	local MobFolder = Dungeon:FindFirstChild("Mob")
 	if MobFolder then
 		local closest, shortestDist = nil, math.huge
-		
+
 		if humanoidRootPart and humanoidRootPart.Parent then
 			local lpPos = humanoidRootPart.Position
-			
+
 			for _, v in ipairs(MobFolder:GetChildren()) do
 				if v:IsA("Model") then
-					local hum = v:FindFirstChildOfClass("Humanoid")
 					local root = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso") or v.PrimaryPart
-					
-					-- Only target mobs that are ALIVE (health > 0)
-					if root and hum and hum.Health > 0 then
+
+					-- Attack/teleport as long as the model exists in the folder
+					if root then
 						local distance = (lpPos - root.Position).Magnitude
 						if distance < shortestDist then
 							shortestDist = distance
@@ -232,19 +231,19 @@ local function findAliveMob()
 				end
 			end
 		end
-		
+
 		return closest, "Mob"
 	end
 
 	return nil, nil
 end
 
--- [KILL LOGIC]
+-- [KILL LOGIC - Also remove health check so it always force-kills any mob model in folder]
 local function killRegularMobs()
 	for _, mob in pairs(mobsFolder:GetChildren()) do
 		if mob:IsA("Model") then
 			local hum = mob:FindFirstChildOfClass("Humanoid")
-			if hum and hum.Health > 0 then
+			if hum then
 				pcall(function()
 					hum.Health = 0
 				end)
