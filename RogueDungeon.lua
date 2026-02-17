@@ -49,10 +49,11 @@ local rejoinOnKickEnabled = false
 local autoDodgeUltimate = false
 local autoLeaveWithPlayer = false
 local isDodgingUltimate = false
+local bossJustKilled = false -- New state to track insta-kill
 local selectedWeaponName = ""
 local selectedSkills = {}
 local bossKillThreshold = 50
-local mobsDistance = 8 -- Default distance for both mobs and boss
+local mobsDistance = 8 
 local currentTarget = nil
 local currentTargetType = nil
 local selectedDungeon = "Anti-Magic"
@@ -190,7 +191,7 @@ local function isBossUsingUltimate()
 	return false
 end
 
--- [TARGET FINDING - Keep attacking mobs as long as their model exists in Mob folder]
+-- [TARGET FINDING]
 local function findAliveMob()
 	local Dungeon = workspace.Main.Characters:FindFirstChild("Dungeon")
 	if not Dungeon then return nil, nil end
@@ -208,7 +209,7 @@ local function findAliveMob()
 		end
 	end
 
-	-- PRIORITY 2: Mobs - target ANY model still in the folder, NO health check
+	-- PRIORITY 2: Mobs
 	local MobFolder = Dungeon:FindFirstChild("Mob")
 	if MobFolder then
 		local closest, shortestDist = nil, math.huge
@@ -219,8 +220,6 @@ local function findAliveMob()
 			for _, v in ipairs(MobFolder:GetChildren()) do
 				if v:IsA("Model") then
 					local root = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso") or v.PrimaryPart
-
-					-- Attack/teleport as long as the model exists in the folder
 					if root then
 						local distance = (lpPos - root.Position).Magnitude
 						if distance < shortestDist then
@@ -238,7 +237,7 @@ local function findAliveMob()
 	return nil, nil
 end
 
--- [KILL LOGIC - Also remove health check so it always force-kills any mob model in folder]
+-- [KILL LOGIC]
 local function killRegularMobs()
 	for _, mob in pairs(mobsFolder:GetChildren()) do
 		if mob:IsA("Model") then
@@ -267,12 +266,31 @@ local function checkAndKillBosses()
 					if percentRemaining <= threshold then
 						pcall(function()
 							hum.Health = 0
+                            -- Teleport far away instantly
+                            if humanoidRootPart then
+                                humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.new(0, 100, 500)
+                            end
+                            bossJustKilled = true -- Activate wait state
 						end)
 					end
 				end
 			end
 		end
 	end
+
+    -- Check if wait state should end (folder is empty of models)
+    if bossJustKilled then
+        local bossFound = false
+        for _, b in pairs(bossFolder:GetChildren()) do
+            if b:IsA("Model") then
+                bossFound = true
+                break
+            end
+        end
+        if not bossFound then
+            bossJustKilled = false -- Resume farming
+        end
+    end
 end
 
 -- [KICK MONITOR LOGIC]
@@ -345,10 +363,11 @@ task.spawn(function()
 	end
 end)
 
--- [HEARTBEAT TELEPORT LOOP - Uses mobsDistance for both boss and mob]
+-- [HEARTBEAT TELEPORT LOOP]
 RunService.Heartbeat:Connect(function()
 	if not autoFarmEnabled then return end
-	if isDodgingUltimate then return end
+    -- Stay far away if we just killed the boss or are dodging
+	if isDodgingUltimate or bossJustKilled then return end
 	
 	pcall(function()
 		local char = player.Character
@@ -357,7 +376,6 @@ RunService.Heartbeat:Connect(function()
 		
 		if not hrp or not hum or hum.Health <= 0 then return end
 
-		-- Always re-find target every heartbeat for instant switching
 		local target, targetType = findAliveMob()
 		
 		if target and target.Parent and targetType then
@@ -368,12 +386,10 @@ RunService.Heartbeat:Connect(function()
 			
 			if targetRoot and targetRoot.Parent then
 				if targetType == "Boss" then
-					-- Use mobsDistance for boss too
 					local behindCFrame = targetRoot.CFrame * CFrame.new(0, 0, mobsDistance)
 					hrp.CFrame = behindCFrame
 					hrp.CFrame = CFrame.lookAt(hrp.Position, targetRoot.Position)
 				else
-					-- Use mobsDistance for mobs too
 					hrp.CFrame = targetRoot.CFrame * CFrame.new(0, 0, mobsDistance)
 				end
 				
@@ -399,8 +415,7 @@ local function autoFarmLoop()
 				equipWeapon()
 			end
 			
-			if not isDodgingUltimate then
-				-- Re-find target every loop for fast switching
+			if not isDodgingUltimate and not bossJustKilled then
 				local target, targetType = findAliveMob()
 				
 				if target and targetType then
@@ -421,7 +436,10 @@ local function autoFarmLoop()
 				
 				killRegularMobs()
 				checkAndKillBosses()
-			end
+			elseif bossJustKilled then
+                -- Still run boss logic while waiting to reset the flag
+                checkAndKillBosses()
+            end
 		end)
 		
 		task.wait(0)
@@ -549,7 +567,6 @@ task.spawn(function()
 						pressKey(Enum.KeyCode.Return)
 						task.wait(0.2)
 					end
-					-- Visible became false, wait 2s to confirm before stopping
 					task.wait(2)
 					if startFrame.Visible then
 						GuiService.SelectedObject = startFrame
@@ -569,7 +586,6 @@ task.spawn(function()
 						pressKey(Enum.KeyCode.Return)
 						task.wait(0.2)
 					end
-					-- Visible became false, wait 2s to confirm before stopping
 					task.wait(2)
 					if restartFrame.Visible then
 						GuiService.SelectedObject = restartFrame
@@ -681,13 +697,6 @@ do
 
 	AutoLeaveToggle:OnChanged(function()
 		autoLeaveWithPlayer = Options.AutoLeaveToggle.Value
-		if autoLeaveWithPlayer then
-			Fluent:Notify({
-				Title = "Auto Leave",
-				Content = "Will leave if another player joins your dungeon!",
-				Duration = 3
-			})
-		end
 	end)
 
 	Tabs.Main:AddParagraph({
@@ -720,9 +729,9 @@ do
 		Title = "Insta-Kill Boss at % Health",
 		Description = "Sets Boss HP to 0 when it drops below this %",
 		Default = 50,
-		Min = 0,
+		Min = 10,
 		Max = 100,
-		Rounding = 1,
+		Rounding = 10,
 		Callback = function(Value)
 			bossKillThreshold = Value
 		end
