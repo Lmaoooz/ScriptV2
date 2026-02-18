@@ -427,7 +427,7 @@ local function autoFarmLoop()
 					currentTarget = target
 					currentTargetType = targetType
 					
-					pressMouseButton()
+					pressMouseButton() -- Manual kill logic
 					
 					for skillKey, enabled in pairs(selectedSkills) do
 						if enabled then
@@ -439,15 +439,13 @@ local function autoFarmLoop()
 					currentTargetType = nil
 				end
 				
-				killRegularMobs()
 				checkAndKillBosses()
 			elseif bossJustKilled then
-                -- Still run boss logic while waiting to reset the flag
                 checkAndKillBosses()
             end
 		end)
 		
-		task.wait(0)
+		task.wait() -- Minimal wait for maximum targeting speed
 	end
 	
 	currentTarget = nil
@@ -836,3 +834,5 @@ task.spawn(function()
 		ensureHaki()
 	end
 end)
+
+-- Pat 2
