@@ -53,7 +53,7 @@ local bossJustKilled = false -- New state to track insta-kill
 local selectedWeaponName = ""
 local selectedSkills = {}
 local bossKillThreshold = 50
-local mobsDistance = 8 
+local mobsDistance = 8
 local currentTarget = nil
 local currentTargetType = nil
 local selectedDungeon = "Anti-Magic"
@@ -252,8 +252,10 @@ local function killRegularMobs()
 end
 
 local function checkAndKillBosses()
+    local bossFound = false
     for _, boss in pairs(bossFolder:GetChildren()) do
         if boss:IsA("Model") then
+            bossFound = true
             local hum = boss:FindFirstChildOfClass("Humanoid")
             if hum then
                 local current = tonumber(hum.Health)
@@ -263,28 +265,27 @@ local function checkAndKillBosses()
                     local percentRemaining = (current / max) * 100
                     local threshold = tonumber(bossKillThreshold) or 50
                     
-                    -- Only set to 0 if Health is currently ABOVE 0 and below threshold
+                    -- Only trigger if HP is above 0 but below the threshold %
                     if current > 0 and percentRemaining <= threshold then
                         pcall(function()
                             hum.Health = 0
+                            bossJustKilled = true -- Switch to "Stay Above" mode
                             
-                            -- After setting to 0, keep you 50 studs above to stay safe
-                            local bossRoot = boss:FindFirstChild("HumanoidRootPart") or boss:FindFirstChild("Torso") or boss.PrimaryPart
-                            if bossRoot and humanoidRootPart then
-                                justKilledBoss = true
-                                humanoidRootPart.CFrame = bossRoot.CFrame * CFrame.new(0, 50, 0)
-                                
-                                -- Wait for model to fully disappear before resuming normal farm
-                                task.spawn(function()
-                                    repeat task.wait(0.5) until not boss:IsDescendantOf(workspace) or not boss.Parent
-                                    justKilledBoss = false
-                                end)
+                            -- Force an instant teleport 50 studs up right now
+                            local root = boss:FindFirstChild("HumanoidRootPart") or boss.PrimaryPart
+                            if root and humanoidRootPart then
+                                humanoidRootPart.CFrame = root.CFrame * CFrame.new(0, 50, 0)
                             end
                         end)
                     end
                 end
             end
         end
+    end
+
+    -- Reset the flag once there are no "Model" children left in Boss folder
+    if bossJustKilled and not bossFound then
+        bossJustKilled = false
     end
 end
 
@@ -361,7 +362,7 @@ end)
 -- [HEARTBEAT TELEPORT LOOP]
 RunService.Heartbeat:Connect(function()
     if not autoFarmEnabled then return end
-    if isDodgingUltimate or justKilledBoss then return end
+    if isDodgingUltimate then return end
     
     pcall(function()
         local char = player.Character
@@ -379,12 +380,17 @@ RunService.Heartbeat:Connect(function()
             local targetRoot = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Torso") or target.PrimaryPart
             
             if targetRoot and targetRoot.Parent then
-                if targetType == "Boss" then
-                    -- This teleports you 50 studs directly ABOVE the boss
+                if bossJustKilled and targetType == "Boss" then
+                    -- Stay 50 studs ABOVE after insta-killing
                     hrp.CFrame = targetRoot.CFrame * CFrame.new(0, 50, 0)
                     hrp.CFrame = CFrame.lookAt(hrp.Position, targetRoot.Position)
+                elseif targetType == "Boss" then
+                    -- Normal Attack: Teleport BEHIND the boss
+                    local behindCFrame = targetRoot.CFrame * CFrame.new(0, 0, mobsDistance)
+                    hrp.CFrame = behindCFrame
+                    hrp.CFrame = CFrame.lookAt(hrp.Position, targetRoot.Position)
                 else
-                    -- Normal mobs stay at the distance set on your slider
+                    -- Normal Mob Attack
                     hrp.CFrame = targetRoot.CFrame * CFrame.new(0, 0, mobsDistance)
                 end
                 
