@@ -191,7 +191,7 @@ local function isBossUsingUltimate()
 	return false
 end
 
--- [TARGET FINDING]
+-- [UPDATED TARGET FINDING]
 local function findAliveMob()
 	local Dungeon = workspace.Main.Characters:FindFirstChild("Dungeon")
 	if not Dungeon then return nil, nil end
@@ -201,9 +201,13 @@ local function findAliveMob()
 	if BossFolder then
 		for _, v in ipairs(BossFolder:GetChildren()) do
 			if v:IsA("Model") then
-				local root = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso") or v.PrimaryPart
-				if root then
-					return v, "Boss"
+				local hum = v:FindFirstChildOfClass("Humanoid")
+				-- NEW: Only target if Health is GREATER than 0
+				if hum and hum.Health > 0 then
+					local root = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso") or v.PrimaryPart
+					if root then
+						return v, "Boss"
+					end
 				end
 			end
 		end
@@ -213,27 +217,27 @@ local function findAliveMob()
 	local MobFolder = Dungeon:FindFirstChild("Mob")
 	if MobFolder then
 		local closest, shortestDist = nil, math.huge
-
 		if humanoidRootPart and humanoidRootPart.Parent then
 			local lpPos = humanoidRootPart.Position
-
 			for _, v in ipairs(MobFolder:GetChildren()) do
 				if v:IsA("Model") then
-					local root = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso") or v.PrimaryPart
-					if root then
-						local distance = (lpPos - root.Position).Magnitude
-						if distance < shortestDist then
-							shortestDist = distance
-							closest = v
+					local hum = v:FindFirstChildOfClass("Humanoid")
+					-- NEW: Only target if Health is GREATER than 0
+					if hum and hum.Health > 0 then
+						local root = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso") or v.PrimaryPart
+						if root then
+							local distance = (lpPos - root.Position).Magnitude
+							if distance < shortestDist then
+								shortestDist = distance
+								closest = v
+							end
 						end
 					end
 				end
 			end
 		end
-
 		return closest, "Mob"
 	end
-
 	return nil, nil
 end
 
