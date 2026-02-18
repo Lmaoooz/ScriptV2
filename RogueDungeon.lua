@@ -237,7 +237,7 @@ local function findAliveMob()
 	return nil, nil
 end
 
--- [KILL LOGIC]
+-- Kill Reg Mobs
 local function killRegularMobs()
 	for _, mob in pairs(mobsFolder:GetChildren()) do
 		if mob:IsA("Model") then
