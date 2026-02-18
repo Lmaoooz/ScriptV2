@@ -236,23 +236,12 @@ local function findAliveMob()
     return nil, nil
 end
 
--- Kill Reg Mobs
-local function killRegularMobs()
-	for _, mob in pairs(mobsFolder:GetChildren()) do
-		if mob:IsA("Model") then
-			local hum = mob:FindFirstChildOfClass("Humanoid")
-			if hum then
-				pcall(function()
-					hum.Health = 0
-				end)
-			end
-		end
-	end
-end
-
 local function checkAndKillBosses()
+    local bossFound = false -- Define this so the script knows if a boss exists
+    
     for _, boss in pairs(bossFolder:GetChildren()) do
         if boss:IsA("Model") then
+            bossFound = true -- Mark that a boss model was found
             local hum = boss:FindFirstChildOfClass("Humanoid")
             if hum then
                 local current = tonumber(hum.Health)
@@ -265,19 +254,19 @@ local function checkAndKillBosses()
                     if current > 0 and percentRemaining <= bossKillThreshold then
                         pcall(function()
                             hum.Health = 0
+                            bossJustKilled = true -- Set flag when insta-kill triggers
                         end)
                     end
                 end
             end
         end
     end
-end
 
     -- Reset the flag once there are no "Model" children left in Boss folder
     if bossJustKilled and not bossFound then
         bossJustKilled = false
     end
-end
+end -- This correctly ends the function
 
 -- [KICK MONITOR LOGIC]
 local function monitorKickMessages()
@@ -840,4 +829,4 @@ task.spawn(function()
 	end
 end)
 
--- Pat 3
+-- Pat 4
