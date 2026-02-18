@@ -252,43 +252,38 @@ local function killRegularMobs()
 end
 
 local function checkAndKillBosses()
-	for _, boss in pairs(bossFolder:GetChildren()) do
-		if boss:IsA("Model") then
-			local hum = boss:FindFirstChildOfClass("Humanoid")
-			if hum then
-				local current = tonumber(hum.Health)
-				local max = tonumber(hum.MaxHealth)
-				
-				if current and max and current > 0 and max > 0 then
-					local percentRemaining = (current / max) * 100
-					local threshold = tonumber(bossKillThreshold) or 50
-					
-					if percentRemaining <= threshold then
-						pcall(function()
-							hum.Health = 0
-                            -- Teleport far away instantly
-                            if humanoidRootPart then
-                                humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.new(0, 100, 500)
+    for _, boss in pairs(bossFolder:GetChildren()) do
+        if boss:IsA("Model") then
+            local hum = boss:FindFirstChildOfClass("Humanoid")
+            if hum then
+                local current = tonumber(hum.Health)
+                local max = tonumber(hum.MaxHealth)
+                
+                if current and max and max > 0 then
+                    local percentRemaining = (current / max) * 100
+                    local threshold = tonumber(bossKillThreshold) or 50
+                    
+                    -- Only set to 0 if Health is currently ABOVE 0 and below threshold
+                    if current > 0 and percentRemaining <= threshold then
+                        pcall(function()
+                            hum.Health = 0
+                            
+                            -- After setting to 0, keep you 50 studs above to stay safe
+                            local bossRoot = boss:FindFirstChild("HumanoidRootPart") or boss:FindFirstChild("Torso") or boss.PrimaryPart
+                            if bossRoot and humanoidRootPart then
+                                justKilledBoss = true
+                                humanoidRootPart.CFrame = bossRoot.CFrame * CFrame.new(0, 50, 0)
+                                
+                                -- Wait for model to fully disappear before resuming normal farm
+                                task.spawn(function()
+                                    repeat task.wait(0.5) until not boss:IsDescendantOf(workspace) or not boss.Parent
+                                    justKilledBoss = false
+                                end)
                             end
-                            bossJustKilled = true -- Activate wait state
-						end)
-					end
-				end
-			end
-		end
-	end
-
-    -- Check if wait state should end (folder is empty of models)
-    if bossJustKilled then
-        local bossFound = false
-        for _, b in pairs(bossFolder:GetChildren()) do
-            if b:IsA("Model") then
-                bossFound = true
-                break
+                        end)
+                    end
+                end
             end
-        end
-        if not bossFound then
-            bossJustKilled = false -- Resume farming
         end
     end
 end
@@ -365,43 +360,43 @@ end)
 
 -- [HEARTBEAT TELEPORT LOOP]
 RunService.Heartbeat:Connect(function()
-	if not autoFarmEnabled then return end
-    -- Stay far away if we just killed the boss or are dodging
-	if isDodgingUltimate or bossJustKilled then return end
-	
-	pcall(function()
-		local char = player.Character
-		local hrp = char and char:FindFirstChild("HumanoidRootPart")
-		local hum = char and char:FindFirstChild("Humanoid")
-		
-		if not hrp or not hum or hum.Health <= 0 then return end
+    if not autoFarmEnabled then return end
+    if isDodgingUltimate or justKilledBoss then return end
+    
+    pcall(function()
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChild("Humanoid")
+        
+        if not hrp or not hum or hum.Health <= 0 then return end
 
-		local target, targetType = findAliveMob()
-		
-		if target and target.Parent and targetType then
-			currentTarget = target
-			currentTargetType = targetType
-			
-			local targetRoot = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Torso") or target.PrimaryPart
-			
-			if targetRoot and targetRoot.Parent then
-				if targetType == "Boss" then
-					local behindCFrame = targetRoot.CFrame * CFrame.new(0, 0, mobsDistance)
-					hrp.CFrame = behindCFrame
-					hrp.CFrame = CFrame.lookAt(hrp.Position, targetRoot.Position)
-				else
-					hrp.CFrame = targetRoot.CFrame * CFrame.new(0, 0, mobsDistance)
-				end
-				
-				if hrp.AssemblyLinearVelocity.Magnitude > 0 then
-					hrp.AssemblyLinearVelocity = Vector3.zero
-				end
-			end
-		else
-			currentTarget = nil
-			currentTargetType = nil
-		end
-	end)
+        local target, targetType = findAliveMob()
+        
+        if target and target.Parent and targetType then
+            currentTarget = target
+            currentTargetType = targetType
+            
+            local targetRoot = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Torso") or target.PrimaryPart
+            
+            if targetRoot and targetRoot.Parent then
+                if targetType == "Boss" then
+                    -- This teleports you 50 studs directly ABOVE the boss
+                    hrp.CFrame = targetRoot.CFrame * CFrame.new(0, 50, 0)
+                    hrp.CFrame = CFrame.lookAt(hrp.Position, targetRoot.Position)
+                else
+                    -- Normal mobs stay at the distance set on your slider
+                    hrp.CFrame = targetRoot.CFrame * CFrame.new(0, 0, mobsDistance)
+                end
+                
+                if hrp.AssemblyLinearVelocity.Magnitude > 0 then
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                end
+            end
+        else
+            currentTarget = nil
+            currentTargetType = nil
+        end
+    end)
 end)
 
 -- [MAIN AUTO FARM LOOP]
