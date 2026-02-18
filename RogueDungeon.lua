@@ -730,9 +730,9 @@ do
 		Title = "Insta-Kill Boss at % Health",
 		Description = "Sets Boss HP to 0 when it drops below this %",
 		Default = 50,
-		Min = 10,
+		Min = 1,
 		Max = 100,
-		Rounding = 10,
+		Rounding = 0,
 		Callback = function(Value)
 			bossKillThreshold = Value
 		end
