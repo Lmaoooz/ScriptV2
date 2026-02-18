@@ -193,52 +193,47 @@ end
 
 -- [UPDATED TARGET FINDING]
 local function findAliveMob()
-	local Dungeon = workspace.Main.Characters:FindFirstChild("Dungeon")
-	if not Dungeon then return nil, nil end
+    local Dungeon = workspace.Main.Characters:FindFirstChild("Dungeon")
+    if not Dungeon then return nil, nil end
 
-	-- PRIORITY 1: Boss
-	local BossFolder = Dungeon:FindFirstChild("Boss")
-	if BossFolder then
-		for _, v in ipairs(BossFolder:GetChildren()) do
-			if v:IsA("Model") then
-				local hum = v:FindFirstChildOfClass("Humanoid")
-				-- NEW: Only target if Health is GREATER than 0
-				if hum and hum.Health > 0 then
-					local root = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso") or v.PrimaryPart
-					if root then
-						return v, "Boss"
-					end
-				end
-			end
-		end
-	end
+    -- PRIORITY 1: Boss (Target ANY boss model, dead or alive, so we stay floating safely)
+    local BossFolder = Dungeon:FindFirstChild("Boss")
+    if BossFolder then
+        for _, v in ipairs(BossFolder:GetChildren()) do
+            if v:IsA("Model") then
+                local root = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso") or v.PrimaryPart
+                if root then
+                    return v, "Boss"
+                end
+            end
+        end
+    end
 
-	-- PRIORITY 2: Mobs
-	local MobFolder = Dungeon:FindFirstChild("Mob")
-	if MobFolder then
-		local closest, shortestDist = nil, math.huge
-		if humanoidRootPart and humanoidRootPart.Parent then
-			local lpPos = humanoidRootPart.Position
-			for _, v in ipairs(MobFolder:GetChildren()) do
-				if v:IsA("Model") then
-					local hum = v:FindFirstChildOfClass("Humanoid")
-					-- NEW: Only target if Health is GREATER than 0
-					if hum and hum.Health > 0 then
-						local root = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso") or v.PrimaryPart
-						if root then
-							local distance = (lpPos - root.Position).Magnitude
-							if distance < shortestDist then
-								shortestDist = distance
-								closest = v
-							end
-						end
-					end
-				end
-			end
-		end
-		return closest, "Mob"
-	end
-	return nil, nil
+    -- PRIORITY 2: Mobs (Only target alive ones for fast switching)
+    local MobFolder = Dungeon:FindFirstChild("Mob")
+    if MobFolder then
+        local closest, shortestDist = nil, math.huge
+        if humanoidRootPart and humanoidRootPart.Parent then
+            local lpPos = humanoidRootPart.Position
+            for _, v in ipairs(MobFolder:GetChildren()) do
+                if v:IsA("Model") then
+                    local hum = v:FindFirstChildOfClass("Humanoid")
+                    if hum and hum.Health > 0 then -- Ignore dead mobs
+                        local root = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso") or v.PrimaryPart
+                        if root then
+                            local distance = (lpPos - root.Position).Magnitude
+                            if distance < shortestDist then
+                                shortestDist = distance
+                                closest = v
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        return closest, "Mob"
+    end
+    return nil, nil
 end
 
 -- Kill Reg Mobs
@@ -256,10 +251,8 @@ local function killRegularMobs()
 end
 
 local function checkAndKillBosses()
-    local bossFound = false
     for _, boss in pairs(bossFolder:GetChildren()) do
         if boss:IsA("Model") then
-            bossFound = true
             local hum = boss:FindFirstChildOfClass("Humanoid")
             if hum then
                 local current = tonumber(hum.Health)
@@ -267,25 +260,18 @@ local function checkAndKillBosses()
                 
                 if current and max and max > 0 then
                     local percentRemaining = (current / max) * 100
-                    local threshold = tonumber(bossKillThreshold) or 50
                     
-                    -- Only trigger if HP is above 0 but below the threshold %
-                    if current > 0 and percentRemaining <= threshold then
+                    -- Only set HP to 0 if it's currently alive and below threshold
+                    if current > 0 and percentRemaining <= bossKillThreshold then
                         pcall(function()
                             hum.Health = 0
-                            bossJustKilled = true -- Switch to "Stay Above" mode
-                            
-                            -- Force an instant teleport 50 studs up right now
-                            local root = boss:FindFirstChild("HumanoidRootPart") or boss.PrimaryPart
-                            if root and humanoidRootPart then
-                                humanoidRootPart.CFrame = root.CFrame * CFrame.new(0, 50, 0)
-                            end
                         end)
                     end
                 end
             end
         end
     end
+end
 
     -- Reset the flag once there are no "Model" children left in Boss folder
     if bossJustKilled and not bossFound then
@@ -384,21 +370,40 @@ RunService.Heartbeat:Connect(function()
             local targetRoot = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Torso") or target.PrimaryPart
             
             if targetRoot and targetRoot.Parent then
-                if bossJustKilled and targetType == "Boss" then
-                    -- Stay 50 studs ABOVE after insta-killing
+                local shouldTeleportUp = false
+                
+                -- Check if Boss is below threshold
+                if targetType == "Boss" then
+                    local bHum = target:FindFirstChildOfClass("Humanoid")
+                    if bHum then
+                        local bMax = bHum.MaxHealth
+                        local bCur = bHum.Health
+                        if bMax > 0 then
+                            local pct = (bCur / bMax) * 100
+                            -- If HP is 0 OR below threshold, stay up
+                            if pct <= bossKillThreshold or bCur <= 0 then
+                                shouldTeleportUp = true
+                            end
+                        end
+                    end
+                end
+
+                if shouldTeleportUp then
+                    -- STAY SAFE: 50 studs ABOVE the boss
                     hrp.CFrame = targetRoot.CFrame * CFrame.new(0, 50, 0)
                     hrp.CFrame = CFrame.lookAt(hrp.Position, targetRoot.Position)
+                    hrp.AssemblyLinearVelocity = Vector3.zero -- Stop falling
                 elseif targetType == "Boss" then
-                    -- Normal Attack: Teleport BEHIND the boss
-                    local behindCFrame = targetRoot.CFrame * CFrame.new(0, 0, mobsDistance)
-                    hrp.CFrame = behindCFrame
+                    -- ATTACK MODE: Behind the boss
+                    hrp.CFrame = targetRoot.CFrame * CFrame.new(0, 0, mobsDistance)
                     hrp.CFrame = CFrame.lookAt(hrp.Position, targetRoot.Position)
                 else
-                    -- Normal Mob Attack
+                    -- NORMAL MOB: Behind the mob
                     hrp.CFrame = targetRoot.CFrame * CFrame.new(0, 0, mobsDistance)
                 end
                 
-                if hrp.AssemblyLinearVelocity.Magnitude > 0 then
+                -- General safety to prevent flinging
+                if hrp.AssemblyLinearVelocity.Magnitude > 50 then
                     hrp.AssemblyLinearVelocity = Vector3.zero
                 end
             end
@@ -835,4 +840,4 @@ task.spawn(function()
 	end
 end)
 
--- Pat 2
+-- Pat 3
