@@ -379,7 +379,7 @@ RunService.Heartbeat:Connect(function()
 
                 if shouldTeleportUp then
                     -- STAY SAFE: 50 studs ABOVE the boss
-                    hrp.CFrame = targetRoot.CFrame * CFrame.new(0, 20, 0)
+                    hrp.CFrame = targetRoot.CFrame * CFrame.new(0, 60, 0)
                     hrp.CFrame = CFrame.lookAt(hrp.Position, targetRoot.Position)
                     hrp.AssemblyLinearVelocity = Vector3.zero -- Stop falling
                 elseif targetType == "Boss" then
@@ -829,4 +829,4 @@ task.spawn(function()
 	end
 end)
 
--- Pat 4
+-- Pat 5
