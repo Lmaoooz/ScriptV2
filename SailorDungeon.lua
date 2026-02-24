@@ -680,7 +680,7 @@ RunService.Heartbeat:Connect(function()
             if shouldTeleportUp then
                 -- STAY SAFE: 100 studs ABOVE the boss
                 pcall(function()
-                    HumanoidRootPart.CFrame = targetRoot.CFrame * CFrame.new(0, 20, 0)
+                    HumanoidRootPart.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 0)
                     HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
                     HumanoidRootPart.AssemblyAngularVelocity = Vector3.zero
                 end)
@@ -800,4 +800,4 @@ Window:SelectTab(1)
 
 SaveManager:LoadAutoloadConfig()
 
--- V12
+-- V13
