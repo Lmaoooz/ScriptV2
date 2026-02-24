@@ -69,7 +69,8 @@ local abilityKeys = {
     ["Z"] = Enum.KeyCode.Z,
     ["X"] = Enum.KeyCode.X,
     ["C"] = Enum.KeyCode.C,
-    ["V"] = Enum.KeyCode.V
+    ["V"] = Enum.KeyCode.V,
+    ["F"] = Enum.KeyCode.F
 }
 
 -- Config
@@ -336,7 +337,7 @@ do
             Fluent:Notify({
                 Title = "Warning",
                 Content = "Instant Kill Features Might Be Slower Depends On Bosses HP",
-                Duration = 5
+                Duration = 30
             })
         end
     end)
@@ -457,7 +458,7 @@ do
     local AbilityDropdown = Tabs.Main:AddDropdown("AbilityDropdown", {
         Title = "Select Ability Keys",
         Description = "Choose which ability keys to press automatically.",
-        Values = {"Z", "X", "C", "V"},
+        Values = {"Z", "X", "C", "V", "F"},
         Multi = true,
         Default = {},
     })
@@ -501,7 +502,7 @@ do
     -- Auto Haki Toggle
     local AutoHakiToggle = Tabs.Main:AddToggle("AutoHakiToggle", {
         Title = "Auto Haki [Buso]",
-        Default = false
+        Default = true
     })
 
     AutoHakiToggle:OnChanged(function()
@@ -824,4 +825,4 @@ Window:SelectTab(1)
 
 SaveManager:LoadAutoloadConfig()
 
--- Vnuts
+-- V15
