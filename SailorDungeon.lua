@@ -125,12 +125,23 @@ local function isBossInSafetyMode()
 end
 
 local function findNearestEnemy()
-    local nearestEnemy = nil
-    local shortestDistance = math.huge
-    
-    -- Get enemies from workspace.NPCs folder
     local NPCsFolder = workspace:FindFirstChild("NPCs")
     if not NPCsFolder then return nil end
+    
+    -- PRIORITY 1: Find any boss (dead or alive) to stay safe above them
+    for _, entity in pairs(NPCsFolder:GetChildren()) do
+        if entity:IsA("Model") and isBoss(entity) then
+            local enemyRoot = entity:FindFirstChild("HumanoidRootPart")
+            if enemyRoot then
+                -- Return boss immediately, regardless of health
+                return entity
+            end
+        end
+    end
+    
+    -- PRIORITY 2: Find nearest alive mob
+    local nearestEnemy = nil
+    local shortestDistance = math.huge
     
     for _, entity in pairs(NPCsFolder:GetChildren()) do
         if entity:IsA("Model") and isValidEnemy(entity) then
@@ -622,7 +633,10 @@ RunService.Heartbeat:Connect(function()
     
     -- Search for new target
     if currentTime - lastTargetSearchTime >= CONFIG.TargetRefreshRate then
-        if not currentTarget or not isValidEnemy(currentTarget) then
+        -- For bosses, keep them as target even if health is 0 (as long as model exists)
+        if currentTarget and isBoss(currentTarget) and currentTarget.Parent then
+            -- Keep boss as target, don't search for new one
+        elseif not currentTarget or not isValidEnemy(currentTarget) then
             currentTarget = findNearestEnemy()
         end
         lastTargetSearchTime = currentTime
@@ -649,9 +663,16 @@ RunService.Heartbeat:Connect(function()
                 
                 if bMax > 0 then
                     local pct = (bCur / bMax) * 100
-                    -- If HP is 0 OR below 75%, teleport up
+                    -- If HP drops to 75% or below, enter kill mode
                     if pct <= 75 or bCur <= 0 then
                         shouldTeleportUp = true
+                        -- CONTINUOUSLY force boss health to 0 every heartbeat
+                        -- This prevents boss from healing back
+                        if bCur ~= 0 then
+                            pcall(function()
+                                hum.Health = 0
+                            end)
+                        end
                     end
                 end
             end
@@ -678,7 +699,10 @@ RunService.Heartbeat:Connect(function()
                 end
             end
         else
-            currentTarget = nil
+            -- Don't clear boss targets even if health is 0
+            if not isBoss(currentTarget) then
+                currentTarget = nil
+            end
         end
     else
         currentTarget = nil
@@ -776,4 +800,4 @@ Window:SelectTab(1)
 
 SaveManager:LoadAutoloadConfig()
 
--- V10
+-- V11
