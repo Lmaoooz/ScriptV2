@@ -3,8 +3,6 @@ if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
-task.wait(2) -- Additional wait to ensure everything is loaded
-
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
@@ -55,6 +53,7 @@ local AutoEquipWeaponEnabled = false
 local AutoJoinDungeonEnabled = false
 local AutoDifficultyEnabled = false
 local AutoReplayDungeonEnabled = false
+local selectedMode = "Normal"
 local currentTarget = nil
 local lastAttackTime = 0
 local lastTargetSearchTime = 0
@@ -104,6 +103,9 @@ end
 
 -- Helper function to check if boss is in safety mode (75% or below)
 local function isBossInSafetyMode()
+    -- Only disable abilities in Instant-Kill mode
+    if selectedMode ~= "Instant-Kill" then return false end
+    
     if not currentTarget then return false end
     if not currentTarget.Parent then return false end
     if not isBoss(currentTarget) then return false end
@@ -128,18 +130,20 @@ local function findNearestEnemy()
     local NPCsFolder = workspace:FindFirstChild("NPCs")
     if not NPCsFolder then return nil end
     
-    -- PRIORITY 1: Find any boss (dead or alive) to stay safe above them
-    for _, entity in pairs(NPCsFolder:GetChildren()) do
-        if entity:IsA("Model") and isBoss(entity) then
-            local enemyRoot = entity:FindFirstChild("HumanoidRootPart")
-            if enemyRoot then
-                -- Return boss immediately, regardless of health
-                return entity
+    -- PRIORITY 1: In Instant-Kill mode, find any boss (dead or alive) to stay safe above them
+    if selectedMode == "Instant-Kill" then
+        for _, entity in pairs(NPCsFolder:GetChildren()) do
+            if entity:IsA("Model") and isBoss(entity) then
+                local enemyRoot = entity:FindFirstChild("HumanoidRootPart")
+                if enemyRoot then
+                    -- Return boss immediately, regardless of health
+                    return entity
+                end
             end
         end
     end
     
-    -- PRIORITY 2: Find nearest alive mob
+    -- PRIORITY 2: Find nearest alive enemy (including bosses in Normal mode)
     local nearestEnemy = nil
     local shortestDistance = math.huge
     
@@ -316,6 +320,26 @@ do
         Title = "Auto Farm",
         Content = "Automatically clears dungeon."
     })
+
+    -- Select Mode Dropdown
+    local ModeDropdown = Tabs.Main:AddDropdown("ModeDropdown", {
+        Title = "Select Mode",
+        Description = "Choose farming mode for bosses",
+        Values = {"Normal", "Instant-Kill"},
+        Multi = false,
+        Default = 1,
+    })
+
+    ModeDropdown:OnChanged(function(Value)
+        selectedMode = Value
+        if Value == "Instant-Kill" then
+            Fluent:Notify({
+                Title = "Warning",
+                Content = "Instant Kill Features Might Be Slower Depends On Bosses HP",
+                Duration = 5
+            })
+        end
+    end)
 
     -- Main Auto Farm Toggle
     local MainToggle = Tabs.Main:AddToggle("AutoFarmToggle", {
@@ -633,8 +657,8 @@ RunService.Heartbeat:Connect(function()
     
     -- Search for new target
     if currentTime - lastTargetSearchTime >= CONFIG.TargetRefreshRate then
-        -- For bosses, keep them as target even if health is 0 (as long as model exists)
-        if currentTarget and isBoss(currentTarget) and currentTarget.Parent then
+        -- In Instant-Kill mode, keep boss as target even if health is 0 (as long as model exists)
+        if selectedMode == "Instant-Kill" and currentTarget and isBoss(currentTarget) and currentTarget.Parent then
             -- Keep boss as target, don't search for new one
         elseif not currentTarget or not isValidEnemy(currentTarget) then
             currentTarget = findNearestEnemy()
@@ -656,8 +680,8 @@ RunService.Heartbeat:Connect(function()
         if targetRoot and hum then
             local shouldTeleportUp = false
             
-            -- [BOSS LOGIC: Check if name contains "Boss" or "BOSS"]
-            if isBoss(currentTarget) then
+            -- [BOSS LOGIC: Only apply instant-kill if mode is "Instant-Kill"]
+            if isBoss(currentTarget) and selectedMode == "Instant-Kill" then
                 local bMax = hum.MaxHealth
                 local bCur = hum.Health
                 
@@ -680,7 +704,7 @@ RunService.Heartbeat:Connect(function()
             if shouldTeleportUp then
                 -- STAY SAFE: 100 studs ABOVE the boss
                 pcall(function()
-                    HumanoidRootPart.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 0)
+                    HumanoidRootPart.CFrame = targetRoot.CFrame * CFrame.new(0, 100, 0)
                     HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
                     HumanoidRootPart.AssemblyAngularVelocity = Vector3.zero
                 end)
@@ -699,8 +723,8 @@ RunService.Heartbeat:Connect(function()
                 end
             end
         else
-            -- Don't clear boss targets even if health is 0
-            if not isBoss(currentTarget) then
+            -- In Instant-Kill mode, don't clear boss targets even if health is 0
+            if not (selectedMode == "Instant-Kill" and isBoss(currentTarget)) then
                 currentTarget = nil
             end
         end
@@ -800,4 +824,4 @@ Window:SelectTab(1)
 
 SaveManager:LoadAutoloadConfig()
 
--- V13
+-- Vnuts
