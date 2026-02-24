@@ -69,8 +69,7 @@ local abilityKeys = {
     ["Z"] = Enum.KeyCode.Z,
     ["X"] = Enum.KeyCode.X,
     ["C"] = Enum.KeyCode.C,
-    ["V"] = Enum.KeyCode.V,
-    ["F"] = Enum.KeyCode.F
+    ["V"] = Enum.KeyCode.V
 }
 
 -- Config
@@ -199,16 +198,11 @@ local function attackTarget()
     
     task.wait(0.05)
     
-    -- Double check enemy is still valid before attacking
+    -- Double check enemy is still valid before returning
     if not isValidEnemy(currentTarget) then
         currentTarget = nil
         return false
     end
-    
-    -- Attack
-    pcall(function()
-        AttackRemote:FireServer()
-    end)
     
     return true
 end
@@ -337,7 +331,7 @@ do
             Fluent:Notify({
                 Title = "Warning",
                 Content = "Instant Kill Features Might Be Slower Depends On Bosses HP",
-                Duration = 30
+                Duration = 5
             })
         end
     end)
@@ -458,7 +452,7 @@ do
     local AbilityDropdown = Tabs.Main:AddDropdown("AbilityDropdown", {
         Title = "Select Ability Keys",
         Description = "Choose which ability keys to press automatically.",
-        Values = {"Z", "X", "C", "V", "F"},
+        Values = {"Z", "X", "C", "V"},
         Multi = true,
         Default = {},
     })
@@ -502,7 +496,7 @@ do
     -- Auto Haki Toggle
     local AutoHakiToggle = Tabs.Main:AddToggle("AutoHakiToggle", {
         Title = "Auto Haki [Buso]",
-        Default = true
+        Default = false
     })
 
     AutoHakiToggle:OnChanged(function()
@@ -705,7 +699,7 @@ RunService.Heartbeat:Connect(function()
             if shouldTeleportUp then
                 -- STAY SAFE: 100 studs ABOVE the boss
                 pcall(function()
-                    HumanoidRootPart.CFrame = targetRoot.CFrame * CFrame.new(0, 100, 0)
+                    HumanoidRootPart.CFrame = targetRoot.CFrame * CFrame.new(0, 10, 0)
                     HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
                     HumanoidRootPart.AssemblyAngularVelocity = Vector3.zero
                 end)
@@ -748,6 +742,19 @@ task.spawn(function()
                     end
                 end
             end
+        end
+    end
+end)
+
+-- Auto Attack Loop (Continuous attack spam)
+task.spawn(function()
+    while true do
+        task.wait()
+        
+        if AutoFarmEnabled then
+            pcall(function()
+                AttackRemote:FireServer()
+            end)
         end
     end
 end)
@@ -825,4 +832,4 @@ Window:SelectTab(1)
 
 SaveManager:LoadAutoloadConfig()
 
--- V15
+-- V1
