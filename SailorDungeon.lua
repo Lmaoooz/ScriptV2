@@ -370,7 +370,7 @@ do
 
     local DungeonDropdown = Tabs.Dungeon:AddDropdown("DungeonDropdown", {
         Title = "Select Dungeon",
-        Values = {"CidDungeon", "RuneDungeon"},
+        Values = {"CidDungeon", "RuneDungeon", "DoubleDungeon"},
         Multi = false,
         Default = 1,
     })
@@ -572,3 +572,5 @@ InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
 Window:SelectTab(1)
 SaveManager:LoadAutoloadConfig()
+
+-- Pat 2
