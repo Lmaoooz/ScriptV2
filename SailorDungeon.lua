@@ -102,6 +102,28 @@ local function isValidEnemy(entity)
     return true
 end
 
+-- Helper function to check if boss is in safety mode (75% or below)
+local function isBossInSafetyMode()
+    if not currentTarget then return false end
+    if not currentTarget.Parent then return false end
+    if not isBoss(currentTarget) then return false end
+    
+    local hum = currentTarget:FindFirstChildOfClass("Humanoid")
+    if not hum then return false end
+    
+    local bMax = hum.MaxHealth
+    local bCur = hum.Health
+    
+    if bMax > 0 then
+        local pct = (bCur / bMax) * 100
+        if pct <= 75 or bCur <= 0 then
+            return true
+        end
+    end
+    
+    return false
+end
+
 local function findNearestEnemy()
     local nearestEnemy = nil
     local shortestDistance = math.huge
@@ -638,7 +660,6 @@ RunService.Heartbeat:Connect(function()
                 -- STAY SAFE: 100 studs ABOVE the boss
                 pcall(function()
                     HumanoidRootPart.CFrame = targetRoot.CFrame * CFrame.new(0, 100, 0)
-                    HumanoidRootPart.CFrame = CFrame.lookAt(HumanoidRootPart.Position, targetRoot.Position)
                     HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
                     HumanoidRootPart.AssemblyAngularVelocity = Vector3.zero
                 end)
@@ -670,9 +691,12 @@ task.spawn(function()
         task.wait(0.1)
         
         if AutoAbilityEnabled then
-            for abilityKey, enabled in pairs(selectedAbilities) do
-                if enabled and abilityKeys[abilityKey] then
-                    pressKey(abilityKeys[abilityKey])
+            -- Don't use abilities when boss is at 75% HP or below
+            if not isBossInSafetyMode() then
+                for abilityKey, enabled in pairs(selectedAbilities) do
+                    if enabled and abilityKeys[abilityKey] then
+                        pressKey(abilityKeys[abilityKey])
+                    end
                 end
             end
         end
@@ -752,4 +776,4 @@ Window:SelectTab(1)
 
 SaveManager:LoadAutoloadConfig()
 
--- V9
+-- V10
