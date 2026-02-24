@@ -608,59 +608,48 @@ RunService.Heartbeat:Connect(function()
     
     -- Attack and Teleport Logic
     if currentTarget then
-        -- First check if the boss model still exists in workspace (even if health = 0)
+        -- Check if model still exists in workspace
         if not currentTarget.Parent then
-            -- Model is completely gone from workspace, clear target
             currentTarget = nil
             return
         end
         
         local targetRoot = currentTarget:FindFirstChild("HumanoidRootPart")
         local hum = currentTarget:FindFirstChildOfClass("Humanoid")
-        local isSafetyTeleporting = false
         
         if targetRoot and hum then
-            -- [BOSS LOGIC: NAME CHECK]
+            -- [BOSS LOGIC: Check if name contains "Boss" or "BOSS"]
             if isBoss(currentTarget) then
-                local threshold = hum.MaxHealth * 0.8 -- 20% Drained (80% of max = boss at 20% HP remaining)
+                local threshold = hum.MaxHealth * 0.2 -- 20% HP remaining
                 
-                -- If boss HP <= 20% remaining, continuously teleport above
-                if hum.Health <= threshold or hum.Health <= 0 then
-                    -- KEEP TELEPORTING ABOVE UNTIL MODEL IS REMOVED FROM WORKSPACE
+                -- If boss HP <= 20%, KEEP teleporting above until model is gone
+                if hum.Health <= threshold then
                     pcall(function()
-                        hum.Health = 0 -- Force health to 0
-                        
-                        -- Check if targetRoot still has a parent before teleporting
                         if targetRoot.Parent then
+                            -- Teleport 100 studs above boss EVERY HEARTBEAT
                             HumanoidRootPart.CFrame = targetRoot.CFrame * CFrame.new(0, 100, 0)
                             HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
+                            HumanoidRootPart.AssemblyAngularVelocity = Vector3.zero
                         end
                     end)
-                    isSafetyTeleporting = true
-                    -- DON'T clear currentTarget - keep it locked so we stay above until model is gone
+                    -- DON'T clear currentTarget - keep it locked until model is gone
+                    lastAttackTime = currentTime
+                    return -- Skip normal attack logic
                 end
             end
         end
 
-        -- [NORMAL ATTACK LOGIC] - only runs if NOT safety teleporting
-        if not isSafetyTeleporting then
-            -- Only attack if enemy is valid (has health > 0)
-            if isValidEnemy(currentTarget) then
-                if currentTime - lastAttackTime >= CONFIG.AttackDelay then
-                    if attackTarget() then
-                        lastAttackTime = currentTime
-                    else
-                        currentTarget = nil
-                    end
+        -- [NORMAL ATTACK LOGIC] - only runs for non-boss or boss above 20%
+        if isValidEnemy(currentTarget) then
+            if currentTime - lastAttackTime >= CONFIG.AttackDelay then
+                if attackTarget() then
+                    lastAttackTime = currentTime
+                else
+                    currentTarget = nil
                 end
-            else
-                -- Enemy died but model might still exist, clear it
-                currentTarget = nil
             end
         else
-            -- We are safety teleporting above the boss
-            -- Update attack timer so we don't interrupt the teleport loop
-            lastAttackTime = currentTime
+            currentTarget = nil
         end
     else
         currentTarget = nil
@@ -755,4 +744,4 @@ Window:SelectTab(1)
 
 SaveManager:LoadAutoloadConfig()
 
--- Pat 2
+-- Pat 3
