@@ -641,7 +641,7 @@ RunService.Heartbeat:Connect(function()
                         
                         -- Teleport 100 studs above boss EVERY HEARTBEAT
                         if targetRoot.Parent then
-                            HumanoidRootPart.CFrame = targetRoot.CFrame * CFrame.new(0, 100, 0)
+                            HumanoidRootPart.CFrame = targetRoot.CFrame * CFrame.new(0, 700, 0)
                             HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
                             HumanoidRootPart.AssemblyAngularVelocity = Vector3.zero
                         end
@@ -760,4 +760,4 @@ Window:SelectTab(1)
 
 SaveManager:LoadAutoloadConfig()
 
--- Pat 4
+-- Pat 5
