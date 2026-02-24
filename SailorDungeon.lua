@@ -603,15 +603,16 @@ RunService.Heartbeat:Connect(function()
     if currentTime - lastTargetSearchTime >= CONFIG.TargetRefreshRate then
         if not currentTarget or not isValidEnemy(currentTarget) then
             currentTarget = findNearestEnemy()
-            isBossKillMode = false -- Reset when finding new target
+            isBossKillMode = false
         end
         lastTargetSearchTime = currentTime
     end
     
     -- Attack and Teleport Logic
     if currentTarget then
-        -- Check if model still exists in workspace
+        -- ONLY check if MODEL exists in workspace - not health
         if not currentTarget.Parent then
+            -- Model is completely GONE from workspace, clear everything
             currentTarget = nil
             isBossKillMode = false
             return
@@ -623,36 +624,37 @@ RunService.Heartbeat:Connect(function()
         if targetRoot and hum then
             -- [BOSS LOGIC: Check if name contains "Boss" or "BOSS"]
             if isBoss(currentTarget) then
-                -- Trigger kill mode when boss HP drops to 75% (25% drained)
+                -- Enter kill mode when boss HP drops to 75%
                 if not isBossKillMode then
-                    local threshold = hum.MaxHealth * 0.75 -- 75% HP
+                    local threshold = hum.MaxHealth * 0.75
                     if hum.Health <= threshold then
                         isBossKillMode = true
                     end
                 end
                 
-                -- KILL MODE: Keep teleporting and forcing health to 0 until model is GONE
+                -- KILL MODE: Keep teleporting until MODEL is GONE (not until health is 0)
                 if isBossKillMode then
                     pcall(function()
-                        -- Force boss health to 0 every heartbeat
+                        -- Force health to 0 if it's not 0
                         if hum.Health ~= 0 then
                             hum.Health = 0
                         end
                         
-                        -- Teleport 100 studs above boss EVERY HEARTBEAT
+                        -- ALWAYS teleport above, EVEN IF HEALTH IS 0
                         if targetRoot.Parent then
-                            HumanoidRootPart.CFrame = targetRoot.CFrame * CFrame.new(0, 250, 0)
+                            HumanoidRootPart.CFrame = targetRoot.CFrame * CFrame.new(0, 100, 0)
                             HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
                             HumanoidRootPart.AssemblyAngularVelocity = Vector3.zero
                         end
                     end)
                     lastAttackTime = currentTime
-                    return -- Skip normal attack logic
+                    -- Keep looping - DON'T stop until model.Parent is nil
+                    return
                 end
             end
         end
 
-        -- [NORMAL ATTACK LOGIC] - only runs for non-boss or boss above 75%
+        -- [NORMAL ATTACK LOGIC] - only for non-boss or boss above 75%
         if isValidEnemy(currentTarget) then
             if currentTime - lastAttackTime >= CONFIG.AttackDelay then
                 if attackTarget() then
@@ -663,8 +665,10 @@ RunService.Heartbeat:Connect(function()
                 end
             end
         else
-            currentTarget = nil
-            isBossKillMode = false
+            -- For non-boss enemies, clear if dead
+            if not isBossKillMode then
+                currentTarget = nil
+            end
         end
     else
         currentTarget = nil
