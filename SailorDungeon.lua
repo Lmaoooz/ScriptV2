@@ -56,7 +56,6 @@ local AutoJoinDungeonEnabled = false
 local AutoDifficultyEnabled = false
 local AutoReplayDungeonEnabled = false
 local currentTarget = nil
-local isBossKillMode = false
 local lastAttackTime = 0
 local lastTargetSearchTime = 0
 local lastDifficultyVoteTime = 0
@@ -603,18 +602,15 @@ RunService.Heartbeat:Connect(function()
     if currentTime - lastTargetSearchTime >= CONFIG.TargetRefreshRate then
         if not currentTarget or not isValidEnemy(currentTarget) then
             currentTarget = findNearestEnemy()
-            isBossKillMode = false
         end
         lastTargetSearchTime = currentTime
     end
     
     -- Attack and Teleport Logic
     if currentTarget then
-        -- ONLY check if MODEL exists in workspace - not health
+        -- Check if model still exists in workspace
         if not currentTarget.Parent then
-            -- Model is completely GONE from workspace, clear everything
             currentTarget = nil
-            isBossKillMode = false
             return
         end
         
@@ -622,57 +618,49 @@ RunService.Heartbeat:Connect(function()
         local hum = currentTarget:FindFirstChildOfClass("Humanoid")
         
         if targetRoot and hum then
+            local shouldTeleportUp = false
+            
             -- [BOSS LOGIC: Check if name contains "Boss" or "BOSS"]
             if isBoss(currentTarget) then
-                -- Enter kill mode when boss HP drops to 75%
-                if not isBossKillMode then
-                    local threshold = hum.MaxHealth * 0.75
-                    if hum.Health <= threshold then
-                        isBossKillMode = true
+                local bMax = hum.MaxHealth
+                local bCur = hum.Health
+                
+                if bMax > 0 then
+                    local pct = (bCur / bMax) * 100
+                    -- If HP is 0 OR below 75%, teleport up
+                    if pct <= 75 or bCur <= 0 then
+                        shouldTeleportUp = true
                     end
                 end
-                
-                -- KILL MODE: Keep teleporting until MODEL is GONE (not until health is 0)
-                if isBossKillMode then
-                    pcall(function()
-                        -- Force health to 0 if it's not 0
-                        if hum.Health ~= 0 then
-                            hum.Health = 0
-                        end
-                        
-                        -- ALWAYS teleport above, EVEN IF HEALTH IS 0
-                        if targetRoot.Parent then
-                            HumanoidRootPart.CFrame = targetRoot.CFrame * CFrame.new(0, 100, 0)
-                            HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
-                            HumanoidRootPart.AssemblyAngularVelocity = Vector3.zero
-                        end
-                    end)
-                    lastAttackTime = currentTime
-                    -- Keep looping - DON'T stop until model.Parent is nil
-                    return
-                end
+            end
+            
+            if shouldTeleportUp then
+                -- STAY SAFE: 100 studs ABOVE the boss
+                pcall(function()
+                    HumanoidRootPart.CFrame = targetRoot.CFrame * CFrame.new(0, 100, 0)
+                    HumanoidRootPart.CFrame = CFrame.lookAt(HumanoidRootPart.Position, targetRoot.Position)
+                    HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
+                    HumanoidRootPart.AssemblyAngularVelocity = Vector3.zero
+                end)
+                lastAttackTime = currentTime
+                return -- Skip normal attack logic
             end
         end
 
-        -- [NORMAL ATTACK LOGIC] - only for non-boss or boss above 75%
+        -- [NORMAL ATTACK LOGIC]
         if isValidEnemy(currentTarget) then
             if currentTime - lastAttackTime >= CONFIG.AttackDelay then
                 if attackTarget() then
                     lastAttackTime = currentTime
                 else
                     currentTarget = nil
-                    isBossKillMode = false
                 end
             end
         else
-            -- For non-boss enemies, clear if dead
-            if not isBossKillMode then
-                currentTarget = nil
-            end
+            currentTarget = nil
         end
     else
         currentTarget = nil
-        isBossKillMode = false
     end
 end)
 
